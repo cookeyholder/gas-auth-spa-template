@@ -310,6 +310,7 @@ function initializeAccountSheet() {
     const headers = [
         "Email",
         "姓名",
+        "部門單位",
         "角色",
         "群組",
         "狀態",
@@ -332,12 +333,13 @@ function initializeAccountSheet() {
     // 設定欄位寬度
     sheet.setColumnWidth(1, 200); // Email
     sheet.setColumnWidth(2, 120); // 姓名
-    sheet.setColumnWidth(3, 100); // 角色
-    sheet.setColumnWidth(4, 120); // 群組
-    sheet.setColumnWidth(5, 80); // 狀態
-    sheet.setColumnWidth(6, 150); // 建立時間
-    sheet.setColumnWidth(7, 150); // 最後更新
-    sheet.setColumnWidth(8, 200); // 備註
+    sheet.setColumnWidth(3, 150); // 部門單位
+    sheet.setColumnWidth(4, 100); // 角色
+    sheet.setColumnWidth(5, 120); // 群組
+    sheet.setColumnWidth(6, 80); // 狀態
+    sheet.setColumnWidth(7, 150); // 建立時間
+    sheet.setColumnWidth(8, 150); // 最後更新
+    sheet.setColumnWidth(9, 200); // 備註
 
     SpreadsheetApp.getUi().alert("帳號工作表初始化完成！");
 }
