@@ -9,9 +9,7 @@ function onOpen() {
         .addSubMenu(
             ui
                 .createMenu("帳號管理")
-                .addItem("檢查權限", "checkPermissions")
                 .addItem("初始化帳號工作表", "initializeAccountSheet")
-                .addItem("新增帳號", "showAddAccountDialog")
                 .addItem("查詢帳號", "showSearchAccountDialog")
         )
         .addToUi();
@@ -243,51 +241,6 @@ function getWebsiteParameters() {
 }
 
 /**
- * 檢查使用者權限
- * @param {string} email - 使用者 email
- * @param {string} requiredRole - 需要的角色 (admin/editor/viewer)
- * @return {boolean}
- */
-function checkUserPermission(email, requiredRole = "viewer") {
-    const sheet = getAccountSheet();
-    if (!sheet) return false;
-
-    const data = sheet.getDataRange().getValues();
-    const headers = data[0];
-    const emailCol = headers.indexOf("Email");
-    const roleCol = headers.indexOf("角色");
-    const statusCol = headers.indexOf("狀態");
-
-    for (let i = 1; i < data.length; i++) {
-        if (data[i][emailCol] === email && data[i][statusCol] === "啟用") {
-            const userRole = data[i][roleCol];
-            const roleHierarchy = { admin: 3, editor: 2, viewer: 1 };
-            return roleHierarchy[userRole] >= roleHierarchy[requiredRole];
-        }
-    }
-    return false;
-}
-
-/**
- * 檢查目前使用者權限
- */
-function checkPermissions() {
-    const user = getCurrentUser();
-    const ui = SpreadsheetApp.getUi();
-
-    const isAdmin = checkUserPermission(user.email, "admin");
-    const isEditor = checkUserPermission(user.email, "editor");
-    const isViewer = checkUserPermission(user.email, "viewer");
-
-    let message = `Email: ${user.email}\n\n權限狀態:\n`;
-    message += `管理員: ${isAdmin ? "✓" : "✗"}\n`;
-    message += `編輯者: ${isEditor ? "✓" : "✗"}\n`;
-    message += `檢視者: ${isViewer ? "✓" : "✗"}`;
-
-    ui.alert("權限檢查", message, ui.ButtonSet.OK);
-}
-
-/**
  * 取得或建立帳號工作表
  */
 function getAccountSheet() {
@@ -296,7 +249,7 @@ function getAccountSheet() {
 
     if (!sheet) {
         sheet = ss.insertSheet("帳號管理");
-        initializeAccountSheet();
+        initializeAccountSheet(false); // 自動建立時不顯示訊息
     }
 
     return sheet;
@@ -304,20 +257,22 @@ function getAccountSheet() {
 
 /**
  * 初始化帳號工作表
+ * @param {boolean} showAlert - 是否顯示完成訊息，預設為 true
  */
-function initializeAccountSheet() {
+function initializeAccountSheet(showAlert = true) {
     const sheet = getAccountSheet();
     const headers = [
         "Email",
         "姓名",
+        "人員編號",
         "部門單位",
-        "角色",
         "群組",
         "狀態",
-        "建立時間",
-        "最後更新",
         "備註",
     ];
+
+    // 清除工作表所有內容
+    sheet.clear();
 
     // 設定標題列
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
@@ -333,50 +288,22 @@ function initializeAccountSheet() {
     // 設定欄位寬度
     sheet.setColumnWidth(1, 200); // Email
     sheet.setColumnWidth(2, 120); // 姓名
-    sheet.setColumnWidth(3, 150); // 部門單位
-    sheet.setColumnWidth(4, 100); // 角色
+    sheet.setColumnWidth(3, 120); // 人員編號
+    sheet.setColumnWidth(4, 150); // 部門單位
     sheet.setColumnWidth(5, 120); // 群組
     sheet.setColumnWidth(6, 80); // 狀態
-    sheet.setColumnWidth(7, 150); // 建立時間
-    sheet.setColumnWidth(8, 150); // 最後更新
-    sheet.setColumnWidth(9, 200); // 備註
+    sheet.setColumnWidth(7, 200); // 備註
 
-    SpreadsheetApp.getUi().alert("帳號工作表初始化完成！");
-}
-
-/**
- * 顯示新增帳號對話框
- */
-function showAddAccountDialog() {
-    const ui = SpreadsheetApp.getUi();
-
-    // 檢查權限
-    const currentUser = getCurrentUser();
-    if (!checkUserPermission(currentUser.email, "admin")) {
-        ui.alert("權限不足", "只有管理員可以新增帳號", ui.ButtonSet.OK);
-        return;
+    // 刪除多餘的欄位（從第9欄開始到最後一欄）
+    const maxColumns = sheet.getMaxColumns();
+    if (maxColumns > headers.length) {
+        sheet.deleteColumns(headers.length + 1, maxColumns - headers.length);
     }
 
-    // 確保帳號工作表存在
-    const sheet = getAccountSheet();
-
-    // 切換到帳號工作表
-    SpreadsheetApp.getActiveSpreadsheet().setActiveSheet(sheet);
-
-    ui.alert(
-        "新增帳號",
-        "請直接在「帳號管理」工作表中新增一列資料。\n\n" +
-            "欄位說明：\n" +
-            "• Email: 使用者的電子郵件\n" +
-            "• 姓名: 使用者姓名\n" +
-            "• 角色: admin/editor/viewer\n" +
-            "• 群組: 所屬群組（選填）\n" +
-            "• 狀態: 啟用/停用\n" +
-            "• 建立時間: 自動記錄當前時間\n" +
-            "• 最後更新: 自動記錄當前時間\n" +
-            "• 備註: 其他說明（選填）",
-        ui.ButtonSet.OK
-    );
+    // 只在手動執行時顯示訊息
+    if (showAlert) {
+        SpreadsheetApp.getUi().alert("帳號工作表初始化完成！");
+    }
 }
 
 /**
@@ -399,9 +326,10 @@ function searchAccounts(searchTerm) {
             results.push({
                 email: row[0],
                 name: row[1],
-                role: row[2],
-                group: row[3],
-                status: row[4],
+                employeeId: row[2],
+                department: row[3],
+                group: row[4],
+                status: row[5],
             });
         }
     }
@@ -434,7 +362,8 @@ function showSearchAccountDialog() {
     results.forEach((account) => {
         message += `Email: ${account.email}\n`;
         message += `姓名: ${account.name}\n`;
-        message += `角色: ${account.role}\n`;
+        message += `人員編號: ${account.employeeId || "(未設定)"}\n`;
+        message += `部門單位: ${account.department || "(未設定)"}\n`;
         message += `群組: ${account.group || "(未設定)"}\n`;
         message += `狀態: ${account.status}\n`;
         message += "---\n";
