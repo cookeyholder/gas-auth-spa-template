@@ -62,7 +62,31 @@ function writeData() {
  * 處理 GET 請求，顯示首頁
  */
 function doGet(e) {
-    // 檢查使用者是否已授權
+    // 取得目前使用者的 Email
+    const userEmail = Session.getActiveUser().getEmail();
+
+    // 檢查使用者是否已登入 Google 帳號
+    if (!userEmail) {
+        // 使用者未登入，顯示未授權頁面
+        return HtmlService.createHtmlOutputFromFile("unauthorized")
+            .setTitle("需要授權")
+            .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+            .setSandboxMode(HtmlService.SandboxMode.IFRAME);
+    }
+
+    // 取得網站網域設定
+    const websiteDomain = getWebsiteParameter("網站網域");
+
+    // 如果網站網域為空白，表示所有已登入的 Google 帳號都可以使用
+    if (!websiteDomain || websiteDomain.trim() === "") {
+        // 允許所有已登入的使用者訪問
+        return HtmlService.createHtmlOutputFromFile("index")
+            .setTitle("首頁")
+            .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+            .setSandboxMode(HtmlService.SandboxMode.IFRAME);
+    }
+
+    // 如果有設定網站網域，則檢查使用者是否在帳號管理表中
     const user = getCurrentUser();
 
     if (!user) {

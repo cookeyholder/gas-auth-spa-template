@@ -217,11 +217,14 @@
                     document.getElementById('siteName').textContent = siteName;
 
                     // 更新網域顯示
+                    const domainRequirement = document.getElementById('domainRequirement');
                     const domainName = document.getElementById('domainName');
                     if (domain && domain.trim() !== '') {
-                        domainName.textContent = '@' + domain;
+                        // 有設定網域：顯示「請使用 @domain 的 Google 帳號登入」
+                        domainRequirement.innerHTML = '請使用 <strong id="domainName">@' + domain + '</strong> 的 Google 帳號登入';
                     } else {
-                        domainName.textContent = '您的 Google 帳號';
+                        // 沒有設定網域：顯示「請使用任何 Google 帳號登入」
+                        domainRequirement.innerHTML = '請使用任何 <strong>Google 帳號</strong>登入';
                     }
 
                     // 更新客服聯絡資訊
@@ -236,7 +239,7 @@
                     // 使用預設值
                     window.websiteDomain = '';
                     document.getElementById('siteName').textContent = '此應用程式';
-                    document.getElementById('domainName').textContent = '您的 Google 帳號';
+                    document.getElementById('domainRequirement').innerHTML = '請使用任何 <strong>Google 帳號</strong>登入';
                     document.getElementById('supportContact').innerHTML = '💡 <strong>提示：</strong>如果您已完成上述步驟但仍無法登入，請聯絡系統管理員尋求協助。';
                 })
                 .getWebsiteParameters();
