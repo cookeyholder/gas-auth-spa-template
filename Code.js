@@ -298,6 +298,9 @@ function initializeAccountSheet(showAlert = true) {
     // 清除工作表所有內容
     sheet.clear();
 
+    // 設定整個工作表的字體大小為 12
+    sheet.getDataRange().setFontSize(12);
+
     // 設定標題列
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
     sheet
