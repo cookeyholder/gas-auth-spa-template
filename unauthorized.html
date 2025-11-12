@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>需要授權</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #d7ccc8 0%, #a1887f 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 3rem;
+            text-align: center;
+        }
+
+        .icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .message {
+            color: #666;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+
+        .email-box {
+            background: #efebe9;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            word-break: break-all;
+        }
+
+        .email-label {
+            color: #8d6e63;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .email-value {
+            color: #5d4037;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .steps {
+            text-align: left;
+            background: #f5f5f0;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .steps h3 {
+            color: #333;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+        }
+
+        .steps ol {
+            margin-left: 1.5rem;
+            color: #555;
+        }
+
+        .steps li {
+            margin-bottom: 0.8rem;
+            line-height: 1.5;
+        }
+
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #a1887f 0%, #8d6e63 100%);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            border: none;
+            font-size: 1rem;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(141, 110, 99, 0.4);
+        }
+
+        .button:active {
+            transform: translateY(0);
+        }
+
+        .logout-link {
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .logout-link a {
+            color: #8d6e63;
+            text-decoration: none;
+        }
+
+        .logout-link a:hover {
+            text-decoration: underline;
+        }
+
+        .loading {
+            display: inline-block;
+            margin-left: 0.5rem;
+        }
+
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+
+            0%,
+            20% {
+                content: '.';
+            }
+
+            40% {
+                content: '..';
+            }
+
+            60%,
+            100% {
+                content: '...';
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="icon">🔒</div>
+            <h1>需要授權才能存取</h1>
+
+            <div class="message">
+                您已經透過 Google 帳號登入，但您的帳號尚未被授權使用<strong id="siteName">此應用程式</strong>。
+            </div>
+
+            <div class="email-box">
+                <div class="email-label">您目前的登入帳號：</div>
+                <div class="email-value" id="userEmail">載入中<span class="loading"></span></div>
+            </div>
+
+            <div class="steps">
+                <h3>📋 如何取得存取權限</h3>
+                <ul>
+                    <li id="domainRequirement">請使用 <strong id="domainName">載入中...</strong> 的 Google 帳號登入</li>
+                </ul>
+            </div>
+
+            <button class="button" onclick="switchAccount()" id="switchAccountBtn">
+                🔄 切換 Google 帳號
+            </button>
+
+            <p id="supportContact"
+                style="margin-top: 1.5rem; padding: 0.8rem; background: #d7ccc8; border-radius: 4px; color: #5d4037; font-size: 0.95rem;">
+                💡 <strong>提示：</strong>如果您已完成上述步驟但仍無法登入，請聯絡「系統管理員」尋求協助。
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // 載入網站參數
+        function loadWebsiteParameters() {
+            google.script.run
+                .withSuccessHandler(function (paramsJson) {
+                    const params = JSON.parse(paramsJson);
+
+                    // 使用「網站名稱」和「網站網域」作為 key
+                    const siteName = params['網站名稱'] || '我的應用程式';
+                    const domain = params['網站網域'] || '';
+                    const supportUnit = params['客服單位名稱'] || '系統管理員';
+
+                    // 儲存網域資訊供切換帳號使用
+                    window.websiteDomain = domain;
+
+                    // 更新網站名稱顯示
+                    document.getElementById('siteName').textContent = siteName;
+
+                    // 更新網域顯示
+                    const domainName = document.getElementById('domainName');
+                    if (domain && domain.trim() !== '') {
+                        domainName.textContent = '@' + domain;
+                    } else {
+                        domainName.textContent = '您的 Google 帳號';
+                    }
+
+                    // 更新客服聯絡資訊
+                    const supportContact = document.getElementById('supportContact');
+                    supportContact.innerHTML = `💡 <strong>提示：</strong>如果您已完成上述步驟但仍無法登入，請聯絡「${supportUnit}」尋求協助。`;
+
+                    // 設定頁面標題
+                    document.title = '需要授權 - ' + siteName;
+                })
+                .withFailureHandler(function (error) {
+                    console.error('載入網站參數失敗:', error);
+                    // 使用預設值
+                    window.websiteDomain = '';
+                    document.getElementById('siteName').textContent = '此應用程式';
+                    document.getElementById('domainName').textContent = '您的 Google 帳號';
+                    document.getElementById('supportContact').innerHTML = '💡 <strong>提示：</strong>如果您已完成上述步驟但仍無法登入，請聯絡系統管理員尋求協助。';
+                })
+                .getWebsiteParameters();
+        }
+
+        // 取得目前使用者的 Email
+        function getCurrentUserEmail() {
+            google.script.run
+                .withSuccessHandler(function (email) {
+                    if (email) {
+                        document.getElementById('userEmail').textContent = email;
+                    } else {
+                        document.getElementById('userEmail').textContent = '無法取得 Email';
+                    }
+                })
+                .withFailureHandler(function (error) {
+                    console.error('取得 Email 失敗:', error);
+                    document.getElementById('userEmail').textContent = '載入失敗';
+                })
+                .getUserEmail();
+        }
+
+        // 切換 Google 帳號
+        function switchAccount() {
+            // 顯示載入狀態
+            const btn = document.getElementById('switchAccountBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ 切換中...';
+            btn.style.opacity = '0.7';
+            btn.style.cursor = 'not-allowed';
+
+            // 根據網域設定決定跳轉的 URL
+            const domain = window.websiteDomain || '';
+            let targetUrl;
+
+            if (domain && domain.trim() !== '') {
+                // 如果有設定網域，使用指定網域的登入頁面
+                targetUrl = 'https://accounts.google.com/signin/v2/identifier?hd=' + domain;
+            } else {
+                // 如果沒有設定網域，使用帳號選擇器
+                targetUrl = 'https://accounts.google.com/AccountChooser';
+            }
+
+            // 稍微延遲以顯示載入狀態
+            setTimeout(function () {
+                window.top.location.href = targetUrl;
+            }, 300);
+        }
+
+        // 頁面載入時載入網站參數和使用者 Email
+        window.addEventListener('load', function () {
+            loadWebsiteParameters();
+            getCurrentUserEmail();
+        });
+    </script>
+</body>
+
+</html>

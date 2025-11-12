@@ -64,9 +64,22 @@ function writeData() {
  * 處理 GET 請求，顯示首頁
  */
 function doGet(e) {
+    // 檢查使用者是否已授權
+    const user = getCurrentUser();
+
+    if (!user) {
+        // 使用者未在帳號管理表中，顯示未授權頁面
+        return HtmlService.createHtmlOutputFromFile("unauthorized")
+            .setTitle("需要授權")
+            .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+            .setSandboxMode(HtmlService.SandboxMode.IFRAME);
+    }
+
+    // 使用者已授權，顯示主頁面
     return HtmlService.createHtmlOutputFromFile("index")
         .setTitle("首頁")
-        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+        .setSandboxMode(HtmlService.SandboxMode.IFRAME);
 }
 
 // ==================== 帳號管理功能 ====================
@@ -116,51 +129,116 @@ function getCurrentUser() {
 }
 
 /**
- * 驗證 Google ID Token（簡化版本）
- * 在實際應用中應該使用 Google API 進行驗證
- * @param {string} token - Google ID Token
- * @return {Object} 驗證結果 {success: boolean, message: string}
+ * 取得目前使用者的 Email
+ * @return {string} 使用者的 Email
  */
-function verifyGoogleToken(token) {
+function getUserEmail() {
+    const email = Session.getActiveUser().getEmail();
+    Logger.log("使用者 Email: " + email);
+    return email;
+}
+
+/**
+ * 取得網站參數設定
+ * @param {string} paramName - 參數項目名稱（例如：「網站名稱」或「網站網域」）
+ * @return {string} 參數內容，如果找不到則返回預設值
+ */
+function getWebsiteParameter(paramName) {
     try {
-        // 注意：在實際應用中，應該使用 Google 的驗證 API
-        // 例如：https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=TOKEN
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        let sheet = ss.getSheetByName("網站參數設定");
 
-        // 這是一個簡化版本，實際上應該：
-        // 1. 解析 JWT
-        // 2. 驗證簽名
-        // 3. 檢查過期時間
-
-        Logger.log("收到 Google ID Token 進行驗證");
-        Logger.log("Token (前50字):" + token.substring(0, 50) + "...");
-
-        // 簡單驗證：token 不能為空
-        if (!token || token.length === 0) {
-            return {
-                success: false,
-                message: "Token 無效或為空",
-            };
+        // 如果工作表不存在，建立並初始化
+        if (!sheet) {
+            sheet = ss.insertSheet("網站參數設定");
+            const headers = [["參數項目", "參數內容", "參數說明"]];
+            const defaultData = [
+                ["網站名稱", "我的應用程式", "顯示在網頁標題列的網站名稱"],
+                ["網站網域", "", "Google Workspace 網域（例如：example.com）"],
+                ["客服單位名稱", "系統管理員", "客服或支援單位的名稱"],
+            ];
+            sheet.getRange(1, 1, 1, 3).setValues(headers);
+            sheet.getRange(2, 1, defaultData.length, 3).setValues(defaultData);
+            sheet.getRange(1, 1, 1, 3).setFontWeight("bold");
+            sheet.autoResizeColumns(1, 3);
+            Logger.log("已建立「網站參數設定」工作表");
         }
 
-        // 重新檢查使用者
-        const currentUser = getCurrentUser();
-        if (currentUser) {
-            return {
-                success: true,
-                message: "使用者已驗證",
-            };
-        } else {
-            return {
-                success: false,
-                message: "使用者帳號未被授權",
-            };
+        const data = sheet.getDataRange().getValues();
+
+        // 從第二行開始查找（第一行是標題）
+        for (let i = 1; i < data.length; i++) {
+            if (data[i][0] === paramName) {
+                Logger.log(`取得參數 ${paramName}: ${data[i][1]}`);
+                return data[i][1];
+            }
         }
+
+        // 如果找不到參數，返回預設值
+        Logger.log(`找不到參數 ${paramName}，使用預設值`);
+        if (paramName === "網站名稱") return "我的應用程式";
+        if (paramName === "網站網域") return "";
+        return "";
     } catch (error) {
-        Logger.log("Token 驗證出錯: " + error);
-        return {
-            success: false,
-            message: "Token 驗證失敗: " + error,
-        };
+        Logger.log("取得網站參數時發生錯誤: " + error);
+        if (paramName === "網站名稱") return "我的應用程式";
+        if (paramName === "網站網域") return "";
+        return "";
+    }
+}
+
+/**
+ * 取得所有網站參數（供前端使用）
+ * 從「網站參數設定」工作表讀取所有參數，以「參數項目」為 key，「參數內容」為 value
+ * @return {string} JSON 字串
+ */
+function getWebsiteParameters() {
+    try {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        let sheet = ss.getSheetByName("網站參數設定");
+
+        // 如果工作表不存在，建立並初始化
+        if (!sheet) {
+            sheet = ss.insertSheet("網站參數設定");
+            const headers = [["參數項目", "參數內容", "參數說明"]];
+            const defaultData = [
+                ["網站名稱", "我的應用程式", "顯示在網頁標題列的網站名稱"],
+                ["網站網域", "", "Google Workspace 網域（例如：example.com）"],
+                ["客服單位名稱", "系統管理員", "客服或支援單位的名稱"],
+            ];
+            sheet.getRange(1, 1, 1, 3).setValues(headers);
+            sheet.getRange(2, 1, defaultData.length, 3).setValues(defaultData);
+            sheet.getRange(1, 1, 1, 3).setFontWeight("bold");
+            sheet.autoResizeColumns(1, 3);
+            Logger.log("已建立「網站參數設定」工作表");
+        }
+
+        const data = sheet.getDataRange().getValues();
+        const params = {};
+
+        // 從第二行開始讀取（第一行是標題）
+        // 以「參數項目」(第0欄) 為 key，「參數內容」(第1欄) 為 value
+        for (let i = 1; i < data.length; i++) {
+            const paramKey = data[i][0];
+            const paramValue = data[i][1];
+
+            // 只處理有參數名稱的列
+            if (paramKey && paramKey.toString().trim() !== "") {
+                params[paramKey] = paramValue;
+                Logger.log(`載入參數: ${paramKey} = ${paramValue}`);
+            }
+        }
+
+        Logger.log("所有網站參數已載入: " + JSON.stringify(params));
+        return JSON.stringify(params);
+    } catch (error) {
+        Logger.log("取得網站參數時發生錯誤: " + error);
+        // 返回預設值
+        return JSON.stringify({
+            網站名稱: "我的應用程式",
+            網站網域: "",
+            客服單位名稱: "系統管理員",
+        });
     }
 }
 
