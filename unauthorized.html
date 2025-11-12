@@ -183,6 +183,7 @@
                 <h3>📋 如何取得存取權限</h3>
                 <ul>
                     <li id="domainRequirement">請使用 <strong id="domainName">載入中...</strong> 的 Google 帳號登入</li>
+                    <li>點擊底下的「切換 Google 帳號」按鈕並登入 Google 帳號後，請再回到此頁面重新整理。</li>
                 </ul>
             </div>
 
@@ -260,29 +261,55 @@
 
         // 切換 Google 帳號
         function switchAccount() {
-            // 顯示載入狀態
-            const btn = document.getElementById('switchAccountBtn');
-            btn.disabled = true;
-            btn.textContent = '⏳ 切換中...';
-            btn.style.opacity = '0.7';
-            btn.style.cursor = 'not-allowed';
-
-            // 根據網域設定決定跳轉的 URL
+            // 取得網域設定
             const domain = window.websiteDomain || '';
-            let targetUrl;
 
+            // 根據網域設定決定登入 URL
+            let targetUrl;
             if (domain && domain.trim() !== '') {
-                // 如果有設定網域，使用指定網域的登入頁面
-                targetUrl = 'https://accounts.google.com/signin/v2/identifier?hd=' + domain;
+                // 如果有設定網域，使用指定網域的登入頁面（hd 參數指定網域）
+                targetUrl = 'https://accounts.google.com/signin/v2/identifier?hd=' + encodeURIComponent(domain);
             } else {
-                // 如果沒有設定網域，使用帳號選擇器
-                targetUrl = 'https://accounts.google.com/AccountChooser';
+                // 如果沒有設定網域，使用一般帳號選擇器
+                targetUrl = 'https://accounts.google.com/';
             }
 
-            // 稍微延遲以顯示載入狀態
-            setTimeout(function () {
-                window.top.location.href = targetUrl;
-            }, 300);
+            // 開啟新視窗
+            const newWindow = window.open(targetUrl, '_blank', 'width=600,height=700,scrollbars=yes,resizable=yes');
+
+            // 如果瀏覽器阻擋彈出視窗，提示使用者
+            if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+                const domainText = domain ? `請切換到 @${domain} 的 Google 帳號` : '請切換到正確的 Google 帳號';
+                alert(`請允許彈出視窗，以便切換 Google 帳號。\n\n或者您可以手動執行以下步驟：\n1. 在新分頁開啟 ${targetUrl}\n2. ${domainText}\n3. 關閉該分頁\n4. 重新整理此頁面`);
+            } else {
+                // 顯示提示橫幅
+                const domainText = domain ? ` @${domain}` : '';
+                const banner = document.createElement('div');
+                banner.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: linear-gradient(135deg, #8B6F47 0%, #A0826D 100%);
+                    color: white;
+                    padding: 15px 30px;
+                    border-radius: 10px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    z-index: 10000;
+                    font-size: 14px;
+                    text-align: center;
+                    max-width: 90%;
+                `;
+                banner.innerHTML = `✨ 請在新視窗中切換到<strong>${domainText}</strong> 的 Google 帳號<br>完成後關閉該視窗並重新整理此頁面`;
+                document.body.appendChild(banner);
+
+                // 5 秒後自動移除提示
+                setTimeout(() => {
+                    banner.style.transition = 'opacity 0.5s';
+                    banner.style.opacity = '0';
+                    setTimeout(() => banner.remove(), 500);
+                }, 5000);
+            }
         }
 
         // 頁面載入時載入網站參數和使用者 Email
