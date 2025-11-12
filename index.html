@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>首頁</title>
+    <!-- Google Identity Services 函式庫 -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        .navbar {
+            background-color: #4285f4;
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .navbar-user {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .user-email {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .user-name {
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        .welcome-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .welcome-card h1 {
+            color: #333;
+            margin-bottom: 1rem;
+        }
+
+        .welcome-card p {
+            color: #666;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+
+        .login-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+            padding: 2rem;
+        }
+
+        .login-message {
+            text-align: center;
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        #google_signin_button {
+            display: flex;
+            justify-content: center;
+        }
+
+        .error-message {
+            color: #d32f2f;
+            background-color: #ffebee;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+
+        .success-message {
+            color: #388e3c;
+            background-color: #e8f5e9;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">我的應用程式</div>
+        <div class="navbar-user">
+            <div class="user-info">
+                <div class="user-name" id="userName">載入中...</div>
+                <div class="user-email" id="userEmail"></div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="welcome-card">
+            <h1>歡迎使用</h1>
+            <p id="welcomeMessage">正在載入使用者資訊...</p>
+            <div id="google_signin_button" style="display: none; margin-top: 1rem;"></div>
+        </div>
+    </div>
+
+    <script>
+        // 檢查使用者認證狀態
+        function checkUserAuthentication() {
+            google.script.run
+                .withSuccessHandler(function (userJson) {
+                    console.log('後端返回的 JSON 字串:', userJson);
+
+                    if (userJson) {
+                        // 解析 JSON 字串為物件
+                        const user = JSON.parse(userJson);
+                        console.log('使用者資訊載入成功:', user);
+                        displayUserInfo(user);
+                    } else {
+                        // 使用者未登入或不在帳號管理表中
+                        console.log('使用者未認證或未授權');
+                        showLoginPrompt();
+                    }
+                })
+                .withFailureHandler(function (error) {
+                    console.error('呼叫 getCurrentUser() 失敗，錯誤訊息:', error);
+                    showLoginPrompt('發生錯誤：' + error);
+                })
+                .getCurrentUser();
+        }
+
+        // 顯示使用者資訊
+        function displayUserInfo(user) {
+            document.getElementById('userName').textContent = user['姓名'] || '使用者';
+            document.getElementById('userEmail').textContent = user['Email'] || '';
+            document.getElementById('welcomeMessage').innerHTML =
+                `<div class="success-message">✓ 認證成功</div>您好，${user['姓名'] || '使用者'}！您的角色是 ${user['角色'] || '未設定'}${user['群組'] ? '，所屬群組：' + user['群組'] : ''}。`;
+            document.getElementById('google_signin_button').style.display = 'none';
+        }
+
+        // 顯示登入提示
+        function showLoginPrompt(errorMessage = null) {
+            document.getElementById('userName').textContent = '未登入';
+            document.getElementById('userEmail').textContent = '';
+
+            let message = '';
+            if (errorMessage) {
+                message = `<div class="error-message">${errorMessage}</div>`;
+            }
+            message += '您需要透過 Google 帳號登入才能使用此應用程式。\n\n可能的原因：\n• 您尚未登入 Google 帳號\n• 您的帳號還未被加入「帳號管理」工作表\n• 您的帳號狀態為「停用」\n\n請先使用下方按鈕登入，然後聯絡管理員確認帳號已被新增。';
+            document.getElementById('welcomeMessage').innerHTML = message;
+
+            // 顯示 Google Sign-In 按鈕
+            document.getElementById('google_signin_button').style.display = 'flex';
+
+            // 初始化 Google Sign-In
+            if (window.google && window.google.accounts) {
+                window.google.accounts.id.initialize({
+                    client_id: 'YOUR_GOOGLE_CLIENT_ID', // 需要替換為實際的 Client ID
+                    callback: handleCredentialResponse
+                });
+                window.google.accounts.id.renderButton(
+                    document.getElementById('google_signin_button'),
+                    {
+                        theme: 'outline',
+                        size: 'large',
+                        text: 'signin',
+                        locale: 'zh_TW'
+                    }
+                );
+            }
+        }
+
+        // 處理登入回應
+        function handleCredentialResponse(response) {
+            console.log('Google Sign-In 成功');
+            console.log('ID Token:', response.credential);
+
+            // 將 ID Token 發送到後端進行驗證
+            google.script.run
+                .withSuccessHandler(function (result) {
+                    console.log('後端驗證結果:', result);
+                    if (result.success) {
+                        // 驗證成功，重新檢查使用者
+                        checkUserAuthentication();
+                    } else {
+                        showLoginPrompt('帳號驗證失敗：' + result.message);
+                    }
+                })
+                .withFailureHandler(function (error) {
+                    console.error('驗證失敗:', error);
+                    showLoginPrompt('帳號驗證出錯：' + error);
+                })
+                .verifyGoogleToken(response.credential);
+        }
+
+        // 頁面載入時檢查使用者認證
+        window.addEventListener('load', function () {
+            checkUserAuthentication();
+        });
+    </script>
+</body>
+
+</html>
