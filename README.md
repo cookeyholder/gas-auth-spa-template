@@ -1,4 +1,4 @@
-# Google Apps Script 專案範本 (OAuth2 + SPA 版)
+# gas-auth-spa-template (Google Apps Script 專案範本)
 
 這是一個基於 Google Apps Script 的 Web 應用程式範本，採用 Google Identity Services (GIS) 認證與 SPA (Single Page Application) 架構，具備強大的跨網域權限管理功能。
 
