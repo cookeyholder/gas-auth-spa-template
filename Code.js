@@ -59,49 +59,209 @@ function writeData() {
 // ==================== Web 應用程式 ====================
 
 /**
- * 處理 GET 請求，顯示首頁
+ * 處理 GET 請求，顯示首頁 (SPA 架構)
  */
 function doGet(e) {
-    // 取得目前使用者的 Email
-    const userEmail = Session.getActiveUser().getEmail();
+    // 在 SPA 架構中，doGet 僅負責返回 HTML 框架
+    // 所有的身分驗證都在前端載入後透過 JWT 進行
+    return HtmlService.createHtmlOutputFromFile("index")
+        .setTitle("載入中...")
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+        .setSandboxMode(HtmlService.SandboxMode.IFRAME)
+        .addMetaTag("viewport", "width=device-width, initial-scale=1");
+}
 
-    // 檢查使用者是否已登入 Google 帳號
-    if (!userEmail) {
-        // 使用者未登入，顯示未授權頁面
-        return HtmlService.createHtmlOutputFromFile("unauthorized")
-            .setTitle("需要授權")
-            .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
-            .setSandboxMode(HtmlService.SandboxMode.IFRAME);
+// ==================== 認證中介層 ====================
+
+/**
+ * 驗證 Google ID Token (JWT)
+ * @param {string} token - 前端傳來的 ID Token
+ * @return {Object} 解析後的 Token 內容
+ * @throws 如果驗證失敗則拋出錯誤
+ */
+function validateIdToken(token) {
+    if (!token) throw new Error("缺少 Token");
+
+    // 取得我們自己的 Client ID 以進行比對
+    const clientId = getWebsiteParameter("OAuth Client ID");
+
+    // 呼叫 Google 提供的驗證 API (Token Info)
+    // 這是最簡單且安全的方法，省去處理 RSA 公鑰與簽章驗證的複雜度
+    const response = UrlFetchApp.fetch(
+        `https://oauth2.googleapis.com/tokeninfo?id_token=${token}`
+    );
+    const result = JSON.parse(response.getContentText());
+
+    if (response.getResponseCode() !== 200 || result.error) {
+        throw new Error("Token 驗證失敗: " + (result.error_description || "無效的 Token"));
     }
 
-    // 取得網站網域設定
+    // 驗證 Audience (必須與我們的 Client ID 相符)
+    // 注意：如果是開發環境尚未設定 Client ID，我們會顯示警告但暫時放行（或強制要求設定）
+    if (clientId && result.aud !== clientId) {
+        throw new Error("Token 的對象不符 (Audience mismatch)");
+    }
+
+    // 驗證 Issuer
+    if (result.iss !== "accounts.google.com" && result.iss !== "https://accounts.google.com") {
+        throw new Error("無效的 Issuer");
+    }
+
+    // 驗證是否過期 (Token Info API 通常已經幫我們檢查過了，但雙重確認無礙)
+    const now = Math.floor(Date.now() / 1000);
+    if (result.exp < now) {
+        throw new Error("Token 已過期");
+    }
+
+    return result;
+}
+
+/**
+ * 檢查 Email 是否符合存取權限 (網域與白名單)
+ * @param {string} email - 要檢查的 Email
+ * @return {Object} 包含成功與否以及使用者資料 (如果成功)
+ */
+function checkEmailPermission(email) {
+    if (!email) return { success: false, reason: "缺少 Email" };
+
+    // 1. 取得網站網域設定
     const websiteDomain = getWebsiteParameter("網站網域");
 
-    // 如果網站網域為空白，表示所有已登入的 Google 帳號都可以使用
-    if (!websiteDomain || websiteDomain.trim() === "") {
-        // 允許所有已登入的使用者訪問
-        return HtmlService.createHtmlOutputFromFile("index")
-            .setTitle("首頁")
-            .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
-            .setSandboxMode(HtmlService.SandboxMode.IFRAME);
+    // 2. 如果有設定網站網域，先檢查網域 (不分大小寫)
+    if (websiteDomain && websiteDomain.trim() !== "") {
+        const userDomain = email.split("@")[1];
+        if (userDomain.toLowerCase() !== websiteDomain.toLowerCase()) {
+            return { success: false, reason: `僅限使用 @${websiteDomain} 的帳號登入` };
+        }
     }
 
-    // 如果有設定網站網域，則檢查使用者是否在帳號管理表中
-    const user = getCurrentUser();
-
+    // 3. 檢查白名單 (帳號管理工作表)
+    const user = getUserFromSheet(email);
     if (!user) {
-        // 使用者未在帳號管理表中，顯示未授權頁面
-        return HtmlService.createHtmlOutputFromFile("unauthorized")
-            .setTitle("需要授權")
-            .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
-            .setSandboxMode(HtmlService.SandboxMode.IFRAME);
+        return { success: false, reason: "您的帳號尚未被授權存取此應用程式" };
     }
 
-    // 使用者已授權，顯示主頁面
-    return HtmlService.createHtmlOutputFromFile("index")
-        .setTitle("首頁")
-        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
-        .setSandboxMode(HtmlService.SandboxMode.IFRAME);
+    // 4. 檢查帳號狀態
+    if (user["狀態"] !== "啟用") {
+        return { success: false, reason: "您的帳號已被停用，請聯絡管理員" };
+    }
+
+    return { success: true, user: user };
+}
+/**
+ * 權限檢查中介層：驗證 Token 並確認角色是否符合要求
+ * @param {string} token - 前端傳來的 ID Token
+ * @param {string|string[]} requiredRoles - 允許的角色（單一字串或陣列）
+ * @return {Object} 包含成功與否及使用者資料
+ */
+function verifyRole(token, requiredRoles) {
+    try {
+        // 1. 驗證 Token 合法性
+        const decodedToken = validateIdToken(token);
+        const email = decodedToken.email;
+
+        // 2. 檢查 Email 存取權限與網域
+        const permResult = checkEmailPermission(email);
+        if (!permResult.success) {
+            throw new Error(permResult.reason);
+        }
+
+        const user = permResult.user;
+
+        // 3. 檢查角色權限
+        if (requiredRoles) {
+            const roles = Array.isArray(requiredRoles) ? requiredRoles : [requiredRoles];
+            if (!roles.includes(user["角色"])) {
+                throw new Error(`權限不足：您的角色是 ${user["角色"]}，無法執行此操作`);
+            }
+        }
+
+        return { success: true, user: user };
+    } catch (e) {
+        Logger.log(`權限驗證失敗: ${e.message}`);
+        throw e; // 重新拋出錯誤讓前端抓到
+    }
+}
+/**
+ * 受保護的範例 API：取得角色專屬資料
+ * @param {string} token - 前端傳來的 ID Token
+ * @return {string} JSON 字串
+ */
+function getProtectedData(token) {
+    try {
+        // 驗證 Token (不限角色，只要合法即可)
+        const result = verifyRole(token, null);
+        const user = result.user;
+
+        // 根據角色回傳不同資料
+        let data = "";
+        if (user["角色"] === "admin" || user["角色"] === "管理員") {
+            data = "這是管理員專屬的系統統計資料...";
+        } else if (user["角色"] === "teacher" || user["角色"] === "導師") {
+            data = "這是導師專屬的班級學生名單...";
+        } else {
+            data = "這是學生個人的成績與作業資訊...";
+        }
+
+        return JSON.stringify({
+            status: "success",
+            data: data
+        });
+    } catch (e) {
+        return JSON.stringify({
+            status: "error",
+            message: e.message
+        });
+    }
+}
+
+/**
+ * 登入 API：前端傳入 Token，後端回傳使用者身分
+...
+ * @param {string} token - 前端傳來的 ID Token
+ * @return {string} 包含結果的 JSON 字串
+ */
+function loginWithToken(token) {
+    try {
+        const result = verifyRole(token, null); // 登入時不限角色，只要在白名單內即可
+        return JSON.stringify({
+            status: "success",
+            user: result.user
+        });
+    } catch (e) {
+        return JSON.stringify({
+            status: "error",
+            message: e.message
+        });
+    }
+}
+
+/**
+ * 從試算表取得指定 Email 的使用者資料
+...
+ * @param {string} email - 使用者 Email
+ * @return {Object|null} 使用者物件，不存在則返回 null
+ */
+function getUserFromSheet(email) {
+    const sheet = getAccountSheet();
+    if (!sheet) return null;
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const emailCol = headers.indexOf("Email");
+
+    if (emailCol === -1) return null;
+
+    for (let i = 1; i < data.length; i++) {
+        if (data[i][emailCol].toString().trim().toLowerCase() === email.toLowerCase()) {
+            const userObj = {};
+            headers.forEach((header, index) => {
+                userObj[header] = data[i][index];
+            });
+            return userObj;
+        }
+    }
+    return null;
 }
 
 // ==================== 帳號管理功能 ====================
@@ -178,6 +338,7 @@ function getWebsiteParameter(paramName) {
                 ["網站名稱", "我的應用程式", "顯示在網頁標題列的網站名稱"],
                 ["網站網域", "", "Google Workspace 網域（例如：example.com）"],
                 ["客服單位名稱", "系統管理員", "客服或支援單位的名稱"],
+                ["OAuth Client ID", "", "Google Cloud Console 產生的 OAuth 2.0 用戶端 ID"],
             ];
             sheet.getRange(1, 1, 1, 3).setValues(headers);
             sheet.getRange(2, 1, defaultData.length, 3).setValues(defaultData);
@@ -227,6 +388,7 @@ function getWebsiteParameters() {
                 ["網站名稱", "我的應用程式", "顯示在網頁標題列的網站名稱"],
                 ["網站網域", "", "Google Workspace 網域（例如：example.com）"],
                 ["客服單位名稱", "系統管理員", "客服或支援單位的名稱"],
+                ["OAuth Client ID", "", "Google Cloud Console 產生的 OAuth 2.0 用戶端 ID"],
             ];
             sheet.getRange(1, 1, 1, 3).setValues(headers);
             sheet.getRange(2, 1, defaultData.length, 3).setValues(defaultData);
@@ -397,4 +559,21 @@ function showSearchAccountDialog() {
     });
 
     ui.alert("搜尋結果", message, ui.ButtonSet.OK);
+}
+
+/**
+ * 開發階段測試函式：模擬身分驗證流程
+ * 可在 Apps Script 編輯器中手動執行
+ */
+function testAuthScenarios() {
+    const mockEmail = "student@example.com";
+    Logger.log(`[測試] 模擬帳號: ${mockEmail}`);
+
+    const result = checkEmailPermission(mockEmail);
+    if (result.success) {
+        Logger.log("✅ 權限檢查通過");
+        Logger.log("使用者資料: " + JSON.stringify(result.user));
+    } else {
+        Logger.log("❌ 權限檢查失敗: " + result.reason);
+    }
 }
