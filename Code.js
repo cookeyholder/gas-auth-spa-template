@@ -330,25 +330,7 @@ function getUserEmail() {
  */
 function getWebsiteParameter(paramName) {
     try {
-        const ss = SpreadsheetApp.getActiveSpreadsheet();
-        let sheet = ss.getSheetByName("網站參數設定");
-
-        // 如果工作表不存在，建立並初始化
-        if (!sheet) {
-            sheet = ss.insertSheet("網站參數設定");
-            const headers = [["參數項目", "參數內容", "參數說明"]];
-            const defaultData = [
-                ["網站名稱", "我的應用程式", "顯示在網頁標題列的網站名稱"],
-                ["網站網域", "", "Google Workspace 網域（例如：example.com）"],
-                ["客服單位名稱", "系統管理員", "客服或支援單位的名稱"],
-                ["OAuth Client ID", "", "Google Cloud Console 產生的 OAuth 2.0 用戶端 ID"],
-            ];
-            sheet.getRange(1, 1, 1, 3).setValues(headers);
-            sheet.getRange(2, 1, defaultData.length, 3).setValues(defaultData);
-            sheet.getRange(1, 1, 1, 3).setFontWeight("bold");
-            sheet.autoResizeColumns(1, 3);
-            Logger.log("已建立「網站參數設定」工作表");
-        }
+        const sheet = initWebsiteParameterSheet();
 
         const data = sheet.getDataRange().getValues();
 
@@ -380,25 +362,7 @@ function getWebsiteParameter(paramName) {
  */
 function getWebsiteParameters() {
     try {
-        const ss = SpreadsheetApp.getActiveSpreadsheet();
-        let sheet = ss.getSheetByName("網站參數設定");
-
-        // 如果工作表不存在，建立並初始化
-        if (!sheet) {
-            sheet = ss.insertSheet("網站參數設定");
-            const headers = [["參數項目", "參數內容", "參數說明"]];
-            const defaultData = [
-                ["網站名稱", "我的應用程式", "顯示在網頁標題列的網站名稱"],
-                ["網站網域", "", "Google Workspace 網域（例如：example.com）"],
-                ["客服單位名稱", "系統管理員", "客服或支援單位的名稱"],
-                ["OAuth Client ID", "", "Google Cloud Console 產生的 OAuth 2.0 用戶端 ID"],
-            ];
-            sheet.getRange(1, 1, 1, 3).setValues(headers);
-            sheet.getRange(2, 1, defaultData.length, 3).setValues(defaultData);
-            sheet.getRange(1, 1, 1, 3).setFontWeight("bold");
-            sheet.autoResizeColumns(1, 3);
-            Logger.log("已建立「網站參數設定」工作表");
-        }
+        const sheet = initWebsiteParameterSheet();
 
         const data = sheet.getDataRange().getValues();
         const params = {};
@@ -427,6 +391,33 @@ function getWebsiteParameters() {
             客服單位名稱: "系統管理員",
         });
     }
+}
+
+/**
+ * 初始化或取得「網站參數設定」工作表
+ * 如果工作表不存在則自動建立並填入預設值
+ * @return {GoogleAppsScript.Spreadsheet.Sheet} 網站參數設定工作表
+ */
+function initWebsiteParameterSheet() {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName("網站參數設定");
+
+    if (sheet) return sheet;
+
+    sheet = ss.insertSheet("網站參數設定");
+    const headers = [["參數項目", "參數內容", "參數說明"]];
+    const defaultData = [
+        ["網站名稱", "我的應用程式", "顯示在網頁標題列的網站名稱"],
+        ["網站網域", "", "Google Workspace 網域（例如：example.com）"],
+        ["客服單位名稱", "系統管理員", "客服或支援單位的名稱"],
+        ["OAuth Client ID", "", "Google Cloud Console 產生的 OAuth 2.0 用戶端 ID"],
+    ];
+    sheet.getRange(1, 1, 1, 3).setValues(headers);
+    sheet.getRange(2, 1, defaultData.length, 3).setValues(defaultData);
+    sheet.getRange(1, 1, 1, 3).setFontWeight("bold");
+    sheet.autoResizeColumns(1, 3);
+    Logger.log("已建立「網站參數設定」工作表");
+    return sheet;
 }
 
 /**
