@@ -87,8 +87,11 @@ function validateIdToken(token) {
 
     // 呼叫 Google 提供的驗證 API (Token Info)
     // 這是最簡單且安全的方法，省去處理 RSA 公鑰與簽章驗證的複雜度
+    // 注意：tokeninfo 端點適合除錯與低流量應用；高流量或正式環境建議改用本機 JWT 公鑰驗證，避免限流
+    // muteHttpExceptions: true 讓我們能自行讀取非 2xx 回應（例如無效 Token 的 400）
     const response = UrlFetchApp.fetch(
-        `https://oauth2.googleapis.com/tokeninfo?id_token=${token}`
+        `https://oauth2.googleapis.com/tokeninfo?id_token=${token}`,
+        { muteHttpExceptions: true }
     );
     const result = JSON.parse(response.getContentText());
 
@@ -452,7 +455,7 @@ function initializeAccountSheet(showAlert = true) {
         "姓名",
         "人員編號",
         "部門單位",
-        "群組",
+        "角色",
         "狀態",
         "備註",
     ];
@@ -479,7 +482,7 @@ function initializeAccountSheet(showAlert = true) {
     sheet.setColumnWidth(2, 120); // 姓名
     sheet.setColumnWidth(3, 120); // 人員編號
     sheet.setColumnWidth(4, 150); // 部門單位
-    sheet.setColumnWidth(5, 120); // 群組
+    sheet.setColumnWidth(5, 120); // 角色
     sheet.setColumnWidth(6, 80); // 狀態
     sheet.setColumnWidth(7, 200); // 備註
 
@@ -517,7 +520,7 @@ function searchAccounts(searchTerm) {
                 name: row[1],
                 employeeId: row[2],
                 department: row[3],
-                group: row[4],
+                role: row[4],
                 status: row[5],
             });
         }
@@ -553,7 +556,7 @@ function showSearchAccountDialog() {
         message += `姓名: ${account.name}\n`;
         message += `人員編號: ${account.employeeId || "(未設定)"}\n`;
         message += `部門單位: ${account.department || "(未設定)"}\n`;
-        message += `群組: ${account.group || "(未設定)"}\n`;
+        message += `角色: ${account.role || "(未設定)"}\n`;
         message += `狀態: ${account.status}\n`;
         message += "---\n";
     });
