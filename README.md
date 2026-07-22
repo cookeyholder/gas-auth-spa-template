@@ -43,6 +43,7 @@
 ## 相關文件
 
 - [🔐 Google OAuth 2.0 認證申請與原理指南](docs/OAUTH_GUIDE.md)：詳細介紹如何取得 Client ID 以及 OAuth2 的運作原理。
+- [🚀 Google Identity Services (GIS) 設定教學](docs/GIS_SETUP_GUIDE.md)：完整的 GIS 整合步驟、資料來源與安全最佳實踐。
 
 ## 技術架構說明
 
