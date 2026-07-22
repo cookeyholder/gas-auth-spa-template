@@ -199,8 +199,10 @@ function validateIdToken(token) {
     const clientId = getWebsiteParameter("OAuth Client ID");
     
     // 呼叫 Google Token Info API 驗證
+    // muteHttpExceptions: true 才能讀取非 2xx 回應（例如無效 Token 的 400）
     const response = UrlFetchApp.fetch(
-        `https://oauth2.googleapis.com/tokeninfo?id_token=${token}`
+        `https://oauth2.googleapis.com/tokeninfo?id_token=${token}`,
+        { muteHttpExceptions: true }
     );
     const result = JSON.parse(response.getContentText());
     
@@ -222,6 +224,8 @@ function validateIdToken(token) {
     return result;
 }
 ```
+
+> ⚠️ **正式環境注意事項**：`tokeninfo` 端點方便除錯，但 Google 官方文件指出該端點可能被限流或出現間歇性錯誤。低流量的 GAS 應用可直接使用；**高流量或正式環境建議改用本機 JWT 公鑰驗證**（下載 Google 公鑰並在本地驗證簽章），避免依賴遠端端點。詳見 [驗證 Google ID Token](https://developers.google.com/identity/gsi/web/guides/verify-google-id-token)。
 
 ---
 
