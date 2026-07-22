@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>專案架構說明 - GAS Auth SPA Template</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Fira Sans', sans-serif; background: #f8fafc; }
+        .flow-line { stroke-dasharray: 5, 5; animation: dash 20s linear infinite; }
+        @keyframes dash { to { stroke-dashoffset: -100; } }
+        .arch-box { transition: all 0.3s ease; }
+        .arch-box:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.15); }
+        .code-block { font-family: 'Menlo', 'Monaco', 'Courier New', monospace; }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-cyan-600 to-teal-700 text-white py-12 px-6">
+        <div class="max-w-6xl mx-auto">
+            <h1 class="text-4xl font-bold mb-4">GAS Auth SPA Template</h1>
+            <p class="text-xl text-cyan-100">Google Apps Script + Google Identity Services 架構說明</p>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto py-12 px-6">
+        <!-- 專案概述 -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">1</span>
+                專案概述
+            </h2>
+            <div class="bg-white rounded-2xl shadow-lg p-8">
+                <p class="text-gray-600 text-lg leading-relaxed mb-6">
+                    這是一個基於 <strong>Google Apps Script (GAS)</strong> 的 Web 應用程式範本，採用 <strong>Google Identity Services (GIS)</strong> 認證與 <strong>SPA (Single Page Application)</strong> 架構，具備跨網域權限管理功能。
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-cyan-50 rounded-xl p-6">
+                        <div class="text-cyan-600 font-bold text-lg mb-2">🔐 GIS 認證</div>
+                        <p class="text-gray-600 text-sm">使用 Google Identity Services 進行 OAuth 2.0 / OpenID Connect 認證</p>
+                    </div>
+                    <div class="bg-teal-50 rounded-xl p-6">
+                        <div class="text-teal-600 font-bold text-lg mb-2">📄 SPA 架構</div>
+                        <p class="text-gray-600 text-sm">單一 HTML 入口，前端路由切換不同頁面區塊</p>
+                    </div>
+                    <div class="bg-emerald-50 rounded-xl p-6">
+                        <div class="text-emerald-600 font-bold text-lg mb-2">🛡️ 後端防護</div>
+                        <p class="text-gray-600 text-sm">基於 JWT Token 與角色的後端驗證機制</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 系統架構圖 -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">2</span>
+                系統架構圖
+            </h2>
+            <div class="bg-white rounded-2xl shadow-lg p-8 overflow-x-auto">
+                <svg viewBox="0 0 900 520" class="w-full min-w-[700px]" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Google Identity Services -->
+                    <rect x="50" y="20" width="200" height="70" rx="12" fill="#4285F4" class="arch-box"/>
+                    <text x="150" y="50" text-anchor="middle" fill="white" font-size="13" font-weight="bold">Google Identity Services</text>
+                    <text x="150" y="70" text-anchor="middle" fill="#BBDEFB" font-size="11">OAuth 2.0 / OIDC</text>
+
+                    <!-- Google Token Info API -->
+                    <rect x="650" y="20" width="200" height="70" rx="12" fill="#34A853" class="arch-box"/>
+                    <text x="750" y="50" text-anchor="middle" fill="white" font-size="13" font-weight="bold">Google Token Info API</text>
+                    <text x="750" y="70" text-anchor="middle" fill="#C8E6C9" font-size="11">oauth2.googleapis.com</text>
+
+                    <!-- Frontend -->
+                    <rect x="50" y="150" width="380" height="200" rx="12" fill="#E3F2FD" stroke="#1976D2" stroke-width="2" class="arch-box"/>
+                    <text x="240" y="180" text-anchor="middle" fill="#1565C0" font-size="14" font-weight="bold">前端 (index.html)</text>
+
+                    <!-- Frontend blocks -->
+                    <rect x="70" y="200" width="160" height="50" rx="8" fill="#BBDEFB"/>
+                    <text x="150" y="220" text-anchor="middle" fill="#1565C0" font-size="11" font-weight="500">GIS SDK 載入</text>
+                    <text x="150" y="238" text-anchor="middle" fill="#1976D2" font-size="10">gsi/client</text>
+
+                    <rect x="250" y="200" width="160" height="50" rx="8" fill="#BBDEFB"/>
+                    <text x="330" y="220" text-anchor="middle" fill="#1565C0" font-size="11" font-weight="500">SPA 路由切換</text>
+                    <text x="330" y="238" text-anchor="middle" fill="#1976D2" font-size="10">login/app/unauthorized</text>
+
+                    <rect x="70" y="270" width="160" height="50" rx="8" fill="#BBDEFB"/>
+                    <text x="150" y="290" text-anchor="middle" fill="#1565C0" font-size="11" font-weight="500">google.script.run</text>
+                    <text x="150" y="308" text-anchor="middle" fill="#1976D2" font-size="10">前端→後端 RPC</text>
+
+                    <rect x="250" y="270" width="160" height="50" rx="8" fill="#BBDEFB"/>
+                    <text x="330" y="290" text-anchor="middle" fill="#1565C0" font-size="11" font-weight="500">ID Token 處理</text>
+                    <text x="330" y="308" text-anchor="middle" fill="#1976D2" font-size="10">JWT credential</text>
+
+                    <!-- Backend -->
+                    <rect x="470" y="150" width="380" height="200" rx="12" fill="#E8F5E9" stroke="#388E3C" stroke-width="2" class="arch-box"/>
+                    <text x="660" y="180" text-anchor="middle" fill="#2E7D32" font-size="14" font-weight="bold">後端 (Code.js)</text>
+
+                    <!-- Backend blocks -->
+                    <rect x="490" y="200" width="160" height="50" rx="8" fill="#C8E6C9"/>
+                    <text x="570" y="220" text-anchor="middle" fill="#2E7D32" font-size="11" font-weight="500">doGet()</text>
+                    <text x="570" y="238" text-anchor="middle" fill="#388E3C" font-size="10">回傳 HTML 框架</text>
+
+                    <rect x="670" y="200" width="160" height="50" rx="8" fill="#C8E6C9"/>
+                    <text x="750" y="220" text-anchor="middle" fill="#2E7D32" font-size="11" font-weight="500">validateIdToken()</text>
+                    <text x="750" y="238" text-anchor="middle" fill="#388E3C" font-size="10">JWT 驗證</text>
+
+                    <rect x="490" y="270" width="160" height="50" rx="8" fill="#C8E6C9"/>
+                    <text x="570" y="290" text-anchor="middle" fill="#2E7D32" font-size="11" font-weight="500">verifyRole()</text>
+                    <text x="570" y="308" text-anchor="middle" fill="#388E3C" font-size="10">角色權限檢查</text>
+
+                    <rect x="670" y="270" width="160" height="50" rx="8" fill="#C8E6C9"/>
+                    <text x="750" y="290" text-anchor="middle" fill="#2E7D32" font-size="11" font-weight="500">checkEmailPermission()</text>
+                    <text x="750" y="308" text-anchor="middle" fill="#388E3C" font-size="10">白名單檢查</text>
+
+                    <!-- Google Sheets -->
+                    <rect x="50" y="410" width="380" height="80" rx="12" fill="#FFF8E1" stroke="#F9A825" stroke-width="2" class="arch-box"/>
+                    <text x="240" y="445" text-anchor="middle" fill="#F57F17" font-size="14" font-weight="bold">Google 試算表</text>
+                    <text x="240" y="470" text-anchor="middle" fill="#FBC02D" font-size="11">帳號管理工作表 | 網站參數設定工作表</text>
+
+                    <!-- Arrows -->
+                    <!-- GIS to Frontend -->
+                    <line x1="150" y1="90" x2="150" y2="150" stroke="#4285F4" stroke-width="2" class="flow-line"/>
+                    <polygon points="150,150 145,140 155,140" fill="#4285F4"/>
+
+                    <!-- Frontend to Backend -->
+                    <line x1="430" y1="250" x2="470" y2="250" stroke="#607D8B" stroke-width="2" class="flow-line"/>
+                    <polygon points="470,250 460,245 460,255" fill="#607D8B"/>
+
+                    <!-- Backend to Token API -->
+                    <line x1="750" y1="150" x2="750" y2="90" stroke="#34A853" stroke-width="2" class="flow-line"/>
+                    <polygon points="750,90 745,100 755,100" fill="#34A853"/>
+
+                    <!-- Backend to Sheets -->
+                    <line x1="570" y1="350" x2="300" y2="410" stroke="#F9A825" stroke-width="2" class="flow-line"/>
+                    <polygon points="300,410 310,400 315,412" fill="#F9A825"/>
+
+                    <!-- Labels on arrows -->
+                    <text x="145" y="125" text-anchor="middle" fill="#4285F4" font-size="10" font-weight="500">ID Token</text>
+                    <text x="450" y="240" text-anchor="middle" fill="#607D8B" font-size="10" font-weight="500">RPC</text>
+                    <text x="770" y="125" text-anchor="middle" fill="#34A853" font-size="10" font-weight="500">驗證</text>
+                    <text x="420" y="390" text-anchor="middle" fill="#F9A825" font-size="10" font-weight="500">讀寫資料</text>
+                </svg>
+            </div>
+        </section>
+
+        <!-- 認證流程 -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">3</span>
+                認證流程
+            </h2>
+            <div class="bg-white rounded-2xl shadow-lg p-8">
+                <div class="space-y-4">
+                    <!-- Step 1 -->
+                    <div class="flex gap-4 items-start">
+                        <div class="w-10 h-10 bg-cyan-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">1</div>
+                        <div class="flex-1 bg-gray-50 rounded-xl p-4">
+                            <div class="font-bold text-gray-800">使用者載入 Web App</div>
+                            <div class="text-gray-600 text-sm mt-1">GAS <code class="bg-gray-200 px-1 rounded">doGet()</code> 回傳 <code class="bg-gray-200 px-1 rounded">index.html</code>，前端開始載入 GIS SDK</div>
+                        </div>
+                    </div>
+                    <!-- Step 2 -->
+                    <div class="flex gap-4 items-start">
+                        <div class="w-10 h-10 bg-cyan-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">2</div>
+                        <div class="flex-1 bg-gray-50 rounded-xl p-4">
+                            <div class="font-bold text-gray-800">初始化 Google 認證</div>
+                            <div class="text-gray-600 text-sm mt-1">前端呼叫 <code class="bg-gray-200 px-1 rounded">google.accounts.id.initialize()</code>，渲染登入按鈕並顯示 One Tap</div>
+                        </div>
+                    </div>
+                    <!-- Step 3 -->
+                    <div class="flex gap-4 items-start">
+                        <div class="w-10 h-10 bg-cyan-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">3</div>
+                        <div class="flex-1 bg-gray-50 rounded-xl p-4">
+                            <div class="font-bold text-gray-800">使用者點擊登入</div>
+                            <div class="text-gray-600 text-sm mt-1">Google 核發 <strong>ID Token (JWT)</strong> 給前端，包含使用者 Email 與基本資料</div>
+                        </div>
+                    </div>
+                    <!-- Step 4 -->
+                    <div class="flex gap-4 items-start">
+                        <div class="w-10 h-10 bg-cyan-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">4</div>
+                        <div class="flex-1 bg-gray-50 rounded-xl p-4">
+                            <div class="font-bold text-gray-800">前端傳送 Token 到後端</div>
+                            <div class="text-gray-600 text-sm mt-1">透過 <code class="bg-gray-200 px-1 rounded">google.script.run.loginWithToken(token)</code> 將 ID Token 傳送到 GAS 後端</div>
+                        </div>
+                    </div>
+                    <!-- Step 5 -->
+                    <div class="flex gap-4 items-start">
+                        <div class="w-10 h-10 bg-teal-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">5</div>
+                        <div class="flex-1 bg-gray-50 rounded-xl p-4">
+                            <div class="font-bold text-gray-800">後端驗證 Token</div>
+                            <div class="text-gray-600 text-sm mt-1">
+                                <code class="bg-gray-200 px-1 rounded">validateIdToken()</code> 呼叫 Google Token Info API 驗證，檢查 Audience、Issuer、過期時間
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Step 6 -->
+                    <div class="flex gap-4 items-start">
+                        <div class="w-10 h-10 bg-teal-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">6</div>
+                        <div class="flex-1 bg-gray-50 rounded-xl p-4">
+                            <div class="font-bold text-gray-800">檢查權限與角色</div>
+                            <div class="text-gray-600 text-sm mt-1">
+                                <code class="bg-gray-200 px-1 rounded">checkEmailPermission()</code> 檢查網域與白名單 → <code class="bg-gray-200 px-1 rounded">verifyRole()</code> 檢查角色權限
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Step 7 -->
+                    <div class="flex gap-4 items-start">
+                        <div class="w-10 h-10 bg-emerald-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">7</div>
+                        <div class="flex-1 bg-gray-50 rounded-xl p-4">
+                            <div class="font-bold text-gray-800">回傳結果，前端切換畫面</div>
+                            <div class="text-gray-600 text-sm mt-1">後端回傳使用者資料，前端根據角色渲染對應的儀表板區塊</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 檔案結構 -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">4</span>
+                檔案結構
+            </h2>
+            <div class="bg-white rounded-2xl shadow-lg p-8">
+                <div class="code-block text-sm bg-gray-900 text-green-400 rounded-xl p-6 overflow-x-auto">
+<pre>gas-auth-spa-template/
+├── index.html              ← 前端 SPA 入口（GIS SDK、Tailwind CSS、路由邏輯）
+├── Code.js                 ← 後端 GAS 程式碼（認證、權限、試算表操作）
+├── appsscript.json         ← GAS 專案設定（時區、Runtime V8）
+├── .clasp.json             ← clasp 本地開發設定
+├── .gitignore              ← Git 忽略清單
+├── AGENTS.md               ← 開發規範文件
+├── README.md               ← 專案說明文件
+├── docs/
+│   ├── OAUTH_GUIDE.md      ← OAuth 2.0 認證原理與設定教學
+│   ├── GIS_SETUP_GUIDE.md  ← GIS 整合教學、FAQ、資料來源
+│   └── ARCHITECTURE.html   ← 本頁：專案架構說明
+└── 試算表範本.xlsx          ← Google 試算表範本</pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- 後端模組說明 -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">5</span>
+                後端模組說明 (Code.js)
+            </h2>
+            <div class="bg-white rounded-2xl shadow-lg p-8">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="border-b-2 border-gray-200">
+                                <th class="py-3 px-4 text-gray-700 font-bold">函式名稱</th>
+                                <th class="py-3 px-4 text-gray-700 font-bold">類別</th>
+                                <th class="py-3 px-4 text-gray-700 font-bold">功能說明</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm">
+                            <tr class="border-b border-gray-100">
+                                <td class="py-3 px-4 font-mono text-cyan-600">doGet(e)</td>
+                                <td class="py-3 px-4"><span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">Web App</span></td>
+                                <td class="py-3 px-4 text-gray-600">處理 GET 請求，回傳 index.html SPA 框架</td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-3 px-4 font-mono text-cyan-600">validateIdToken(token)</td>
+                                <td class="py-3 px-4"><span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs">認證</span></td>
+                                <td class="py-3 px-4 text-gray-600">驗證 JWT Token（呼叫 Google Token Info API）</td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-3 px-4 font-mono text-cyan-600">checkEmailPermission(email)</td>
+                                <td class="py-3 px-4"><span class="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs">權限</span></td>
+                                <td class="py-3 px-4 text-gray-600">檢查 Email 網域與白名單</td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-3 px-4 font-mono text-cyan-600">verifyRole(token, requiredRoles)</td>
+                                <td class="py-3 px-4"><span class="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs">權限</span></td>
+                                <td class="py-3 px-4 text-gray-600">核心中介層：驗證 Token + 檢查角色權限</td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-3 px-4 font-mono text-cyan-600">loginWithToken(token)</td>
+                                <td class="py-3 px-4"><span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">API</span></td>
+                                <td class="py-3 px-4 text-gray-600">登入 API：驗證 Token 並回傳使用者身分</td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-3 px-4 font-mono text-cyan-600">getProtectedData(token)</td>
+                                <td class="py-3 px-4"><span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">API</span></td>
+                                <td class="py-3 px-4 text-gray-600">受保護的範例 API：依角色回傳不同資料</td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-3 px-4 font-mono text-cyan-600">getWebsiteParameter(name)</td>
+                                <td class="py-3 px-4"><span class="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs">工具</span></td>
+                                <td class="py-3 px-4 text-gray-600">從試算表讀取單一網站參數</td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-3 px-4 font-mono text-cyan-600">getWebsiteParameters()</td>
+                                <td class="py-3 px-4"><span class="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs">工具</span></td>
+                                <td class="py-3 px-4 text-gray-600">一次讀取所有網站參數（JSON 格式）</td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-3 px-4 font-mono text-cyan-600">getUserFromSheet(email)</td>
+                                <td class="py-3 px-4"><span class="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs">工具</span></td>
+                                <td class="py-3 px-4 text-gray-600">從帳號管理工作表查詢使用者</td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 px-4 font-mono text-cyan-600">onOpen()</td>
+                                <td class="py-3 px-4"><span class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">試算表</span></td>
+                                <td class="py-3 px-4 text-gray-600">試算表開啟時建立自訂選單</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 角色權限 -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">6</span>
+                角色權限模型
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white rounded-2xl shadow-lg p-6 border-t-4 border-red-500">
+                    <div class="text-red-600 font-bold text-lg mb-2">admin / 管理員</div>
+                    <div class="text-gray-500 text-sm mb-4">系統負責人</div>
+                    <ul class="text-sm text-gray-600 space-y-2">
+                        <li>✅ 管理所有設定</li>
+                        <li>✅ 管理所有帳號</li>
+                        <li>✅ 存取所有資料</li>
+                        <li>✅ 系統統計資料</li>
+                    </ul>
+                </div>
+                <div class="bg-white rounded-2xl shadow-lg p-6 border-t-4 border-amber-500">
+                    <div class="text-amber-600 font-bold text-lg mb-2">teacher / 導師</div>
+                    <div class="text-gray-500 text-sm mb-4">教職員、班導師</div>
+                    <ul class="text-sm text-gray-600 space-y-2">
+                        <li>❌ 管理系統設定</li>
+                        <li>✅ 管理學生名單</li>
+                        <li>✅ 存取班級資料</li>
+                        <li>❌ 系統統計資料</li>
+                    </ul>
+                </div>
+                <div class="bg-white rounded-2xl shadow-lg p-6 border-t-4 border-cyan-500">
+                    <div class="text-cyan-600 font-bold text-lg mb-2">student / 學生</div>
+                    <div class="text-gray-500 text-sm mb-4">一般使用者</div>
+                    <ul class="text-sm text-gray-600 space-y-2">
+                        <li>❌ 管理系統設定</li>
+                        <li>❌ 管理學生名單</li>
+                        <li>✅ 存取個人資料</li>
+                        <li>✅ 查看成績與作業</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- 試算表結構 -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">7</span>
+                試算表工作表結構
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <div class="font-bold text-gray-800 text-lg mb-4">📋 網站參數設定</div>
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="py-2 px-3 text-left text-gray-600">參數項目</th>
+                                <th class="py-2 px-3 text-left text-gray-600">參數內容</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-2 px-3 font-mono text-cyan-600">網站名稱</td>
+                                <td class="py-2 px-3 text-gray-600">顯示在標題列的名稱</td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-2 px-3 font-mono text-cyan-600">網站網域</td>
+                                <td class="py-2 px-3 text-gray-600">限制登入的 Google 網域</td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-2 px-3 font-mono text-cyan-600">OAuth Client ID</td>
+                                <td class="py-2 px-3 text-gray-600">GIS 認證用的 Client ID</td>
+                            </tr>
+                            <tr>
+                                <td class="py-2 px-3 font-mono text-cyan-600">客服單位名稱</td>
+                                <td class="py-2 px-3 text-gray-600">聯絡資訊顯示用</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <div class="font-bold text-gray-800 text-lg mb-4">👤 帳號管理</div>
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="py-2 px-3 text-left text-gray-600">欄位</th>
+                                <th class="py-2 px-3 text-left text-gray-600">說明</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-2 px-3 font-mono text-cyan-600">Email</td>
+                                <td class="py-2 px-3 text-gray-600">Google 帳號 Email</td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-2 px-3 font-mono text-cyan-600">姓名</td>
+                                <td class="py-2 px-3 text-gray-600">使用者顯示名稱</td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-2 px-3 font-mono text-cyan-600">角色</td>
+                                <td class="py-2 px-3 text-gray-600">admin / teacher / student</td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-2 px-3 font-mono text-cyan-600">狀態</td>
+                                <td class="py-2 px-3 text-gray-600">啟用 / 停用</td>
+                            </tr>
+                            <tr>
+                                <td class="py-2 px-3 font-mono text-cyan-600">部門單位</td>
+                                <td class="py-2 px-3 text-gray-600">所屬組織單位</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 技術選型 -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">8</span>
+                技術選型
+            </h2>
+            <div class="bg-white rounded-2xl shadow-lg p-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <span class="text-2xl">⚡</span>
+                        </div>
+                        <div>
+                            <div class="font-bold text-gray-800">Google Apps Script</div>
+                            <div class="text-gray-600 text-sm">雲端 JavaScript 平台，免伺服器，直接整合 Google 服務</div>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <span class="text-2xl">🔐</span>
+                        </div>
+                        <div>
+                            <div class="font-bold text-gray-800">Google Identity Services</div>
+                            <div class="text-gray-600 text-sm">官方 OAuth 2.0 / OIDC 認證解決方案</div>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 bg-cyan-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <span class="text-2xl">🎨</span>
+                        </div>
+                        <div>
+                            <div class="font-bold text-gray-800">Tailwind CSS</div>
+                            <div class="text-gray-600 text-sm">Utility-first CSS 框架，快速建立響應式介面</div>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <span class="text-2xl">📊</span>
+                        </div>
+                        <div>
+                            <div class="font-bold text-gray-800">Google 試算表</div>
+                            <div class="text-gray-600 text-sm">作為資料庫使用，儲存帳號白名單與系統參數</div>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <span class="text-2xl">🛠️</span>
+                        </div>
+                        <div>
+                            <div class="font-bold text-gray-800">clasp</div>
+                            <div class="text-gray-600 text-sm">GAS 本地開發工具，支援版本控制與 IDE 整合</div>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <span class="text-2xl">📦</span>
+                        </div>
+                        <div>
+                            <div class="font-bold text-gray-800">Lucide Icons</div>
+                            <div class="text-gray-600 text-sm">開源圖示庫，提供豐富的 SVG 圖示</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-gray-400 py-8 px-6 text-center text-sm">
+        <p>GAS Auth SPA Template - 架構說明文件</p>
+        <p class="mt-2">最後更新：2026-07-22</p>
+    </footer>
+</body>
+</html>
