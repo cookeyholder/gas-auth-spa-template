@@ -238,7 +238,11 @@
                 document.getElementById("g_id_signin"),
                 { theme: "outline", size: "large", width: "250", shape: "pill" }
             );
-            google.accounts.id.prompt();
+            google.accounts.id.prompt((notification) => {
+                if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                    console.warn('One Tap 未顯示:', notification.getNotDisplayedReason() || notification.getSkippedReason());
+                }
+            });
             showSection('login-section');
             hideLoading();
         }
