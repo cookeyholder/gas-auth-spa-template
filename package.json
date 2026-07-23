@@ -1,0 +1,15 @@
+{
+  "name": "gas-auth-spa-template",
+  "version": "1.0.0",
+  "description": "Google Apps Script + Google Identity Services 認證 SPA 範本",
+  "scripts": {
+    "setup": "node setup.mjs --create",
+    "deploy": "node setup.mjs",
+    "deploy:uat": "node setup.mjs",
+    "deploy:production": "node setup.mjs --production",
+    "dry-run": "node setup.mjs --dry-run"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
