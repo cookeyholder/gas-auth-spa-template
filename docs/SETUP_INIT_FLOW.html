@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>初始化建置流程解析 - 參考文件</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Fira Sans', sans-serif; background: #f8fafc; }
+        .code-block { font-family: 'Menlo', 'Monaco', 'Courier New', monospace; }
+        section { scroll-margin-top: 2rem; }
+    </style>
+</head>
+<body class="min-h-screen">
+    <header class="bg-gradient-to-r from-cyan-600 to-teal-700 text-white py-12 px-6">
+        <div class="max-w-6xl mx-auto">
+            <h1 class="text-4xl font-bold mb-4">初始化建置流程解析</h1>
+            <p class="text-xl text-cyan-100">參考 gas-school-lunch-management-system 的實作原理，探討無 npm 替代方案</p>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto py-12 px-6">
+
+        <!-- 1. 概述 -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">1</span>
+                什麼是初始化建置流程？
+            </h2>
+            <div class="bg-white rounded-2xl shadow-lg p-8">
+                <p class="text-gray-600 text-lg leading-relaxed">
+                    GAS Web App 不像傳統後端有「執行環境初始化」的概念——部署上去就開機了。但實際營運系統需要<strong>資料庫結構（工作表）、系統參數、預設資料、管理員帳號</strong>等一次性設定，這就是「初始化建置流程」要解決的問題。
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                    <div class="bg-cyan-50 rounded-xl p-6">
+                        <div class="text-cyan-600 font-bold text-lg mb-2">本地端自動化</div>
+                        <p class="text-gray-600 text-sm">從原始碼到線上部署的一鍵流程：clasp 授權、建立專案、上傳、部署</p>
+                    </div>
+                    <div class="bg-teal-50 rounded-xl p-6">
+                        <div class="text-teal-600 font-bold text-lg mb-2">資料庫初始化</div>
+                        <p class="text-gray-600 text-sm">建立 29 張工作表、寫入 SystemConfig、預設補助規則、管理員帳號</p>
+                    </div>
+                    <div class="bg-emerald-50 rounded-xl p-6">
+                        <div class="text-emerald-600 font-bold text-lg mb-2">冪等設計</div>
+                        <p class="text-gray-600 text-sm">工作表已存在則跳過、欄位缺少才補齊，重複執行不破壞既有資料</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. 兩階段流程總覽 -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">2</span>
+                兩階段流程總覽
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white rounded-2xl shadow-lg p-6 border-t-4 border-blue-500">
+                    <div class="font-bold text-gray-800 text-lg mb-2 flex items-center gap-2">
+                        <span class="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center text-sm">1</span>
+                        本地 CLI 自動化
+                    </div>
+                    <p class="text-gray-500 text-sm mb-4">終端機執行 <code class="bg-gray-200 px-1 rounded">npm run setup</code></p>
+                    <div class="text-sm text-gray-600 space-y-3">
+                        <div class="flex gap-2">
+                            <span class="text-blue-600 font-bold">→</span>
+                            <span>檢查 Node.js ≥ v20</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <span class="text-blue-600 font-bold">→</span>
+                            <span>clasp 授權登入（未登入時開啟瀏覽器）</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <span class="text-blue-600 font-bold">→</span>
+                            <span><code class="bg-gray-200 px-1 rounded">clasp create</code> 自動建立 GAS 專案</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <span class="text-blue-600 font-bold">→</span>
+                            <span>寫入 <code class="bg-gray-200 px-1 rounded">.clasp.json</code></span>
+                        </div>
+                        <div class="flex gap-2">
+                            <span class="text-blue-600 font-bold">→</span>
+                            <span><code class="bg-gray-200 px-1 rounded">clasp push --force</code> 上傳原始碼</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <span class="text-blue-600 font-bold">→</span>
+                            <span><code class="bg-gray-200 px-1 rounded">clasp version</code> 建立版本號</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <span class="text-blue-600 font-bold">→</span>
+                            <span><code class="bg-gray-200 px-1 rounded">clasp deploy</code> 部署取得 Web App URL</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <span class="text-blue-600 font-bold">→</span>
+                            <span>存入 <code class="bg-gray-200 px-1 rounded">.deploy/uat.json</code> 固定部署 ID</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl shadow-lg p-6 border-t-4 border-teal-500">
+                    <div class="font-bold text-gray-800 text-lg mb-2 flex items-center gap-2">
+                        <span class="w-8 h-8 bg-teal-100 text-teal-600 rounded-lg flex items-center justify-center text-sm">2</span>
+                        網頁引導精靈
+                    </div>
+                    <p class="text-gray-500 text-sm mb-4">開啟 Web App URL，同意授權後進入</p>
+                    <div class="text-sm text-gray-600 space-y-3">
+                        <div class="flex gap-2">
+                            <span class="text-teal-600 font-bold">→</span>
+                            <span>選擇環境（UAT / PRODUCTION）</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <span class="text-teal-600 font-bold">→</span>
+                            <span>填寫學校名稱、管理員姓名</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <span class="text-teal-600 font-bold">→</span>
+                            <span>點擊「開始一鍵初始化」</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <span class="text-teal-600 font-bold">→</span>
+                            <span>建立 29 張工作表（缺則建、缺欄位則補）</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <span class="text-teal-600 font-bold">→</span>
+                            <span>寫入 SystemConfig 預設參數</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <span class="text-teal-600 font-bold">→</span>
+                            <span>建立補助身分類別與規則（草案）</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <span class="text-teal-600 font-bold">→</span>
+                            <span>註冊第一位 system_admin</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <span class="text-teal-600 font-bold">→</span>
+                            <span>建立 Drive 歸檔資料夾 + Audit Log</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. 第一階段：deploy.sh 深度解析 -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">3</span>
+                deploy.sh 深度解析
+            </h2>
+            <div class="bg-white rounded-2xl shadow-lg p-8 space-y-6">
+                <p class="text-gray-600">這是整個流程的核心指令稿，僅仰賴 <strong>bash + Node.js + clasp</strong>，由 <code class="bg-gray-200 px-1 rounded">npm run setup</code> 觸發。</p>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="py-2 px-3 text-left text-gray-600">區段</th>
+                                <th class="py-2 px-3 text-left text-gray-600">實作方式</th>
+                                <th class="py-2 px-3 text-left text-gray-600">關鍵細節</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-2 px-3 font-medium text-gray-700">環境檢查</td>
+                                <td class="py-2 px-3"><code class="bg-gray-200 px-1 rounded">node -v | cut -d'v' -f2</code></td>
+                                <td class="py-2 px-3 text-gray-600">主版本號 ≥ 20，不符則 exit 1</td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-2 px-3 font-medium text-gray-700">clasp 授權</td>
+                                <td class="py-2 px-3"><code class="bg-gray-200 px-1 rounded">npx clasp status</code> → <code class="bg-gray-200 px-1 rounded">npx clasp login</code></td>
+                                <td class="py-2 px-3 text-gray-600">未授權時自動開啟瀏覽器；無 headless 模式，需人工操作</td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-2 px-3 font-medium text-gray-700">Script ID 判定</td>
+                                <td class="py-2 px-3">參數 → <code class="bg-gray-200 px-1 rounded">.clasp.json</code> → 自動建立</td>
+                                <td class="py-2 px-3 text-gray-600">三種來源依序嘗試，最後手段才 <code class="bg-gray-200 px-1 rounded">clasp create</code></td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-2 px-3 font-medium text-gray-700">自動建立專案</td>
+                                <td class="py-2 px-3"><code class="bg-gray-200 px-1 rounded">npx clasp create --title "..." --type webapp</code></td>
+                                <td class="py-2 px-3 text-gray-600">在 temp 目錄執行避免汙染本地；若 API 未啟用則導引使用者開啟</td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-2 px-3 font-medium text-gray-700">寫入設定檔</td>
+                                <td class="py-2 px-3">cat heredoc → <code class="bg-gray-200 px-1 rounded">.clasp.json</code> + <code class="bg-gray-200 px-1 rounded">.claspignore</code></td>
+                                <td class="py-2 px-3 text-gray-600"><code class="bg-gray-200 px-1 rounded">.claspignore</code> 只允許 <code class="bg-gray-200 px-1 rounded">.gs</code>、<code class="bg-gray-200 px-1 rounded">.html</code>、<code class="bg-gray-200 px-1 rounded">appsscript.json</code></td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-2 px-3 font-medium text-gray-700">上傳與版本</td>
+                                <td class="py-2 px-3"><code class="bg-gray-200 px-1 rounded">clasp push --force</code> + <code class="bg-gray-200 px-1 rounded">clasp version</code></td>
+                                <td class="py-2 px-3 text-gray-600">--force 覆蓋遠端；version 用 regex 解析版本號</td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-2 px-3 font-medium text-gray-700">部署</td>
+                                <td class="py-2 px-3"><code class="bg-gray-200 px-1 rounded">clasp deploy</code> / <code class="bg-gray-200 px-1 rounded">clasp redeploy</code></td>
+                                <td class="py-2 px-3 text-gray-600">.<code class="bg-gray-200 px-1 rounded">deploy/{uat,production}.json</code> 保存 deploymentId，確保 URL 固定</td>
+                            </tr>
+                            <tr>
+                                <td class="py-2 px-3 font-medium text-gray-700">PRODUCTION 防護</td>
+                                <td class="py-2 px-3">read -p 確認字串</td>
+                                <td class="py-2 px-3 text-gray-600">必須輸入 "DEPLOY TO PRODUCTION" 才能繼續</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-700">
+                    <strong>關鍵洞察</strong>：<code class="bg-amber-100 px-1 rounded">deploy.sh</code> 雖然是透過 <code class="bg-amber-100 px-1 rounded">npm run setup</code> 觸發，但它本質上<strong>只依賴 node + npx</strong>（clasp 由 npx 動態下載），即使沒有 <code class="bg-amber-100 px-1 rounded">package.json</code> 也能運作。真正的自動化邏輯全在 bash 指令稿中。
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. 第二階段：SetupService.gs 深度解析 -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">4</span>
+                SetupService.gs 深度解析
+            </h2>
+
+            <!-- 4.1 Sheet Schema 定義 -->
+            <div class="bg-white rounded-2xl shadow-lg p-8 mb-6">
+                <h3 class="font-bold text-gray-800 text-lg mb-4">4.1 工作表 Schema 定義</h3>
+                <p class="text-gray-600 mb-4">以常數物件定義全部 29 張工作表的預期欄位：</p>
+                <div class="code-block text-sm bg-gray-900 text-green-400 rounded-xl p-6 overflow-x-auto">
+<pre>var DATABASE_SCHEMAS = {
+  'SystemConfig': ['config_key', 'config_value', 'description', 'updated_at', 'updated_by'],
+  'Users':         ['user_id', 'email', 'name', 'role', 'class_id', 'enabled', 'created_at', 'updated_at'],
+  'Classes':       ['class_id', 'school_year', 'grade', 'class_name', ...],
+  'Students':      ['student_id', 'student_number', 'school_year', 'class_id', ...],
+  'SubsidyRules':  ['rule_id', 'subsidy_category_id', 'funding_source', ...],
+  // ... 共 29 張
+};</pre>
+                </div>
+                <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mt-4 text-sm text-blue-700">
+                    <strong>設計要點</strong>：把 schema 當作「規範」而不是「指令」。初始化時比對既有工作表，缺失才建立；欄位不足才補。這樣每次執行都是安全的。
+                </div>
+            </div>
+
+            <!-- 4.2 runInitializeWizard -->
+            <div class="bg-white rounded-2xl shadow-lg p-8 mb-6">
+                <h3 class="font-bold text-gray-800 text-lg mb-4">4.2 runInitializeWizard()</h3>
+                <p class="text-gray-600 mb-4">這是第二階段的核心，狀態機驅動的冪等初始化函式：</p>
+                <div class="space-y-3 text-sm text-gray-600">
+                    <div class="flex gap-3 p-3 bg-gray-50 rounded-xl">
+                        <div class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-full flex items-center justify-center font-bold flex-shrink-0">1</div>
+                        <div><strong>權限檢查</strong>：僅 system_admin 或 bootstrapper 可執行</div>
+                    </div>
+                    <div class="flex gap-3 p-3 bg-gray-50 rounded-xl">
+                        <div class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-full flex items-center justify-center font-bold flex-shrink-0">2</div>
+                        <div><strong>逐表建立</strong>：遍歷 DATABASE_SCHEMAS，呼叫 <code class="bg-gray-200 px-1 rounded">SpreadsheetApp.insertSheet()</code> + <code class="bg-gray-200 px-1 rounded">sheet.appendRow(headers)</code>，設定凍結首列 + 粗體表頭</div>
+                    </div>
+                    <div class="flex gap-3 p-3 bg-gray-50 rounded-xl">
+                        <div class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-full flex items-center justify-center font-bold flex-shrink-0">3</div>
+                        <div><strong>寫入 SystemConfig</strong>：檢查是否已存在，只新增不覆蓋。包含 25 項系統設定（學校名稱、餐費、四捨五入規則等）</div>
+                    </div>
+                    <div class="flex gap-3 p-3 bg-gray-50 rounded-xl">
+                        <div class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-full flex items-center justify-center font-bold flex-shrink-0">4</div>
+                        <div><strong>預設資料</strong>：6 種補助身分類別、6 條補助規則（enabled: false 草案狀態）、第一位 system_admin</div>
+                    </div>
+                    <div class="flex gap-3 p-3 bg-gray-50 rounded-xl">
+                        <div class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-full flex items-center justify-center font-bold flex-shrink-0">5</div>
+                        <div><strong>Drive 與日誌</strong>：建立學年度子資料夾、寫入 Audit Log</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4.3 getSystemStatus -->
+            <div class="bg-white rounded-2xl shadow-lg p-8">
+                <h3 class="font-bold text-gray-800 text-lg mb-4">4.3 getSystemStatus() — 狀態檢查</h3>
+                <p class="text-gray-600 mb-4">在引導精靈顯示前先執行，判斷系統處於哪個階段：</p>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="py-2 px-3 text-left text-gray-600">檢查項目</th>
+                                <th class="py-2 px-3 text-left text-gray-600">判定方式</th>
+                                <th class="py-2 px-3 text-left text-gray-600">對應的 statusLevel</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-2 px-3 font-mono text-cyan-600">isInitialized</td>
+                                <td class="py-2 px-3 text-gray-600">29 張工作表全部存在且欄位正確</td>
+                                <td class="py-2 px-3"><span class="bg-green-100 text-green-700 px-2 rounded text-xs">healthy</span></td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-2 px-3 font-mono text-cyan-600">sheetsCount</td>
+                                <td class="py-2 px-3 text-gray-600">比對 current 與 expected</td>
+                                <td class="py-2 px-3"><span class="bg-amber-100 text-amber-700 px-2 rounded text-xs">warning</span></td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-2 px-3 font-mono text-cyan-600">requiredConfigComplete</td>
+                                <td class="py-2 px-3 text-gray-600">SystemConfig 中的必填參數是否都存在</td>
+                                <td class="py-2 px-3"><span class="bg-amber-100 text-amber-700 px-2 rounded text-xs">warning</span></td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-2 px-3 font-mono text-cyan-600">timezoneCheck</td>
+                                <td class="py-2 px-3 text-gray-600">Script 與 Spreadsheet 時區均為 Asia/Taipei</td>
+                                <td class="py-2 px-3"><span class="bg-amber-100 text-amber-700 px-2 rounded text-xs">warning</span></td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-2 px-3 font-mono text-cyan-600">folderStatus</td>
+                                <td class="py-2 px-3 text-gray-600">報表資料夾可讀可寫</td>
+                                <td class="py-2 px-3"><span class="bg-red-100 text-red-700 px-2 rounded text-xs">blocking</span></td>
+                            </tr>
+                            <tr>
+                                <td class="py-2 px-3 font-mono text-cyan-600">SchoolDays 重複</td>
+                                <td class="py-2 px-3 text-gray-600">檢查是否有重複日期</td>
+                                <td class="py-2 px-3"><span class="bg-red-100 text-red-700 px-2 rounded text-xs">blocking</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. 前端精靈 UI -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">5</span>
+                前端引導精靈 UI
+            </h2>
+            <div class="bg-white rounded-2xl shadow-lg p-8">
+                <p class="text-gray-600 mb-6">SetupWizard.html 實作了一個狀態機驅動的多步驟精靈：</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h3 class="font-bold text-gray-800 mb-3">步驟進度條</h3>
+                        <div class="flex justify-between mb-6 relative">
+                            <div class="w-8 h-8 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold z-10">✓</div>
+                            <div class="w-8 h-8 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold z-10">✓</div>
+                            <div class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold z-10">3</div>
+                            <div class="w-8 h-8 bg-gray-200 text-gray-400 rounded-full flex items-center justify-center text-xs font-bold z-10">4</div>
+                            <div class="w-8 h-8 bg-gray-200 text-gray-400 rounded-full flex items-center justify-center text-xs font-bold z-10">5</div>
+                        </div>
+                        <div class="bg-gray-50 rounded-xl p-4 text-sm text-gray-600">
+                            <code class="bg-gray-200 px-1 rounded">step-dot.active</code>（目前步驟）、<code class="bg-gray-200 px-1 rounded">step-dot.completed</code>（已完成）、<code class="bg-gray-200 px-1 rounded">step-panel.show</code>（顯示該步驟內容）。以 <code class="bg-gray-200 px-1 rounded">display: none</code> / <code class="bg-gray-200 px-1 rounded">block</code> + CSS <code class="bg-gray-200 px-1 rounded">fadeIn</code> 動畫切換。
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-800 mb-3">模擬終端機輸出</h3>
+                        <div class="code-block text-sm bg-gray-900 text-green-400 rounded-xl p-4 h-32 overflow-y-auto">
+                            <div>[2026-07-23 12:00:00] 開始初始化...</div>
+                            <div>[OK] 已建立工作表：Classes</div>
+                            <div>[OK] 已建立工作表：Students</div>
+                            <div>[SKIP] 工作表已存在：SystemConfig</div>
+                            <div>[OK] 寫入 SystemConfig 完成</div>
+                            <div>[OK] 初始化完成！</div>
+                        </div>
+                        <p class="text-gray-500 text-xs mt-2">即時顯示後端回傳的初始化進度</p>
+                    </div>
+                </div>
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-6 text-sm text-amber-700">
+                    <strong>重點</strong>：<code class="bg-amber-100 px-1 rounded">google.script.run</code> 為非同步呼叫，前端精靈以 Promise 鏈（<code class="bg-amber-100 px-1 rounded">withSuccessHandler</code>）驅動狀態機逐步推進。每一步完成後呼叫 <code class="bg-amber-100 px-1 rounded">getSystemStatus()</code> 更新進度條。
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. 替代方案 -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">6</span>
+                無 npm 的替代實作方案
+            </h2>
+            <p class="text-gray-600 mb-6 text-lg">這個專案目前沒有 <code class="bg-gray-200 px-1 rounded">package.json</code>，以下分析五種不需要 npm 的初始化建置方式：</p>
+
+            <div class="space-y-6">
+                <!-- 方案 A -->
+                <div class="bg-white rounded-2xl shadow-lg p-6 border-t-4 border-cyan-500">
+                    <div class="flex items-start justify-between mb-4">
+                        <div>
+                            <h3 class="font-bold text-gray-800 text-lg">方案 A：純 bash + 全域 clasp</h3>
+                            <p class="text-gray-500 text-sm">最接近原作的精簡版</p>
+                        </div>
+                        <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold">推薦</span>
+                    </div>
+                    <div class="code-block text-sm bg-gray-900 text-green-400 rounded-xl p-4 overflow-x-auto mb-4">
+<pre>#!/usr/bin/env bash
+# setup.sh — 不需 npm，只要 node 有裝 clasp
+set -e
+
+# 檢查 clasp
+if ! command -v clasp &gt; /dev/null; then
+  echo "請先安裝 clasp: npm install -g @google/clasp"
+  exit 1
+fi
+
+# 建立專案（若無 .clasp.json）
+if [ ! -f ".clasp.json" ] || [ "$1" = "--create" ]; then
+  clasp create "專案名稱" --type webapp
+fi
+
+clasp push --force
+VERSION=$(clasp version "auto" | grep -oP 'Version \K\d+')
+clasp deploy -V "$VERSION" -d "deploy"
+echo "部署完成"</pre>
+                    </div>
+                    <div class="flex items-start gap-2 text-sm text-gray-600">
+                        <span class="text-cyan-600 font-bold">優點</span>
+                        <span>不需套件管理器，指令稿不到 20 行；clasp 全域安裝一次就好</span>
+                    </div>
+                    <div class="flex items-start gap-2 text-sm text-gray-500 mt-1">
+                        <span class="text-red-500 font-bold">注意</span>
+                        <span>需手動安裝 clasp（<code class="bg-gray-200 px-1 rounded">npm install -g @google/clasp</code>），但只需做一次</span>
+                    </div>
+                </div>
+
+                <!-- 方案 B -->
+                <div class="bg-white rounded-2xl shadow-lg p-6 border-t-4 border-teal-500">
+                    <div class="flex items-start justify-between mb-4">
+                        <div>
+                            <h3 class="font-bold text-gray-800 text-lg">方案 B：GAS 自體初始化</h3>
+                            <p class="text-gray-500 text-sm">完全不需要本地端工具</p>
+                        </div>
+                        <span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold">最簡單</span>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-4">使用者只需手動做一次：</p>
+                    <ol class="space-y-2 text-sm text-gray-600 list-decimal list-inside mb-4">
+                        <li>建立 Google 試算表</li>
+                        <li>開啟「擴充功能 → Apps Script」，貼入 <code class="bg-gray-200 px-1 rounded">Code.js</code> 與 <code class="bg-gray-200 px-1 rounded">index.html</code></li>
+                        <li>部署為 Web App</li>
+                        <li>開啟網址，系統偵測到尚未初始化 → 自動跳轉到「初始化精靈」</li>
+                    </ol>
+                    <div class="code-block text-sm bg-gray-900 text-green-400 rounded-xl p-4 overflow-x-auto mb-4">
+<pre>// Code.js
+function doGet() {
+  var status = getSystemStatus();  // 類似 SetupService.getSystemStatus
+  var template = HtmlService.createTemplateFromFile('index');
+  template.needsSetup = !status.isInitialized;
+  return template.evaluate();
+}</pre>
+                    </div>
+                    <div class="flex items-start gap-2 text-sm text-gray-600">
+                        <span class="text-teal-600 font-bold">優點</span>
+                        <span>零本地依賴，使用者只需要瀏覽器</span>
+                    </div>
+                    <div class="flex items-start gap-2 text-sm text-gray-500 mt-1">
+                        <span class="text-red-500 font-bold">注意</span>
+                        <span>需手動操作 GAS 編輯器；版本控制需在 GAS 編輯器中管理</span>
+                    </div>
+                </div>
+
+                <!-- 方案 C -->
+                <div class="bg-white rounded-2xl shadow-lg p-6 border-t-4 border-purple-500">
+                    <div class="flex items-start justify-between mb-4">
+                        <div>
+                            <h3 class="font-bold text-gray-800 text-lg">方案 C：Google Sheets 觸發初始化</h3>
+                            <p class="text-gray-500 text-sm">以試算表作為初始化入口</p>
+                        </div>
+                        <span class="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-xs font-bold">低摩擦</span>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-4">利用 Google Sheets 的容器綁定特性：</p>
+                    <ol class="space-y-2 text-sm text-gray-600 list-decimal list-inside mb-4">
+                        <li>使用者複製一份「試算表範本.xlsx」到自己的 Google Drive</li>
+                        <li>開啟「擴充功能 → Apps Script」→ GAS 已自動綁定該試算表</li>
+                        <li>按一下自訂選單中的「初始化系統」</li>
+                    </ol>
+                    <div class="code-block text-sm bg-gray-900 text-green-400 rounded-xl p-4 overflow-x-auto mb-4">
+<pre>// Code.js
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('🗄️ 系統管理')
+    .addItem('🏗️ 初始化系統', 'showSetupWizard')
+    .addToUi();
+}
+
+function showSetupWizard() {
+  var html = HtmlService.createHtmlOutputFromFile('SetupWizard')
+    .setWidth(800).setHeight(600);
+  SpreadsheetApp.getUi().showModalDialog(html, '初始化精靈');
+}</pre>
+                    </div>
+                    <div class="flex items-start gap-2 text-sm text-gray-600">
+                        <span class="text-purple-600 font-bold">優點</span>
+                        <span>直覺、試算表即入口，綁定後 GAS 自動取得試算表存取權</span>
+                    </div>
+                    <div class="flex items-start gap-2 text-sm text-gray-500 mt-1">
+                        <span class="text-red-500 font-bold">注意</span>
+                        <span>需提供試算表範本供使用者複製</span>
+                    </div>
+                </div>
+
+                <!-- 方案 D -->
+                <div class="bg-white rounded-2xl shadow-lg p-6 border-t-4 border-amber-500">
+                    <div class="flex items-start justify-between mb-4">
+                        <div>
+                            <h3 class="font-bold text-gray-800 text-lg">方案 D：GitHub Actions CI/CD</h3>
+                            <p class="text-gray-500 text-sm">推送即部署，完全自動化</p>
+                        </div>
+                        <span class="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-bold">雲端</span>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-4">在 GitHub 上設定 Actions，每次 push 到 main 就自動部署：</p>
+                    <div class="code-block text-sm bg-gray-900 text-green-400 rounded-xl p-4 overflow-x-auto mb-4">
+<pre># .github/workflows/deploy.yml
+name: Deploy to GAS
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm install -g @google/clasp
+      - run: echo "$CLASP_TOKEN" &gt; ~/.clasprc.json
+        env:
+          CLASP_TOKEN: ${{ secrets.CLASP_TOKEN }}
+      - run: clasp push --force
+      - run: clasp deploy -d "CI deploy"</pre>
+                    </div>
+                    <div class="flex items-start gap-2 text-sm text-gray-600">
+                        <span class="text-amber-600 font-bold">優點</span>
+                        <span>零本地操作，但首次仍需要手動初始化資料庫</span>
+                    </div>
+                    <div class="flex items-start gap-2 text-sm text-gray-500 mt-1">
+                        <span class="text-red-500 font-bold">注意</span>
+                        <span>需要一組 clasp token（<code class="bg-gray-200 px-1 rounded">~/.clasprc.json</code>）存入 GitHub Secrets</span>
+                    </div>
+                </div>
+
+                <!-- 方案 E -->
+                <div class="bg-white rounded-2xl shadow-lg p-6 border-t-4 border-red-500">
+                    <div class="flex items-start justify-between mb-4">
+                        <div>
+                            <h3 class="font-bold text-gray-800 text-lg">方案 E：bootstrap API（純自部署）</h3>
+                            <p class="text-gray-500 text-sm">最簡版，適用於單一管理者</p>
+                        </div>
+                        <span class="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold">極簡</span>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-4">完全捨棄本地工具，在 Web App 中內建完整 bootstrap 能力：</p>
+                    <ol class="space-y-2 text-sm text-gray-600 list-decimal list-inside mb-4">
+                        <li>使用者部署 Web App（需手動設定試算表 ID 到 Script Properties）</li>
+                        <li>第一次開啟時，後端偵測到無工作表 → 自動建立</li>
+                        <li>自動在 Drive 建立設定檔資料夾、寫入預設參數</li>
+                        <li>導引使用者填入 Client ID 等必要參數</li>
+                    </ol>
+                    <div class="bg-gray-50 rounded-xl p-4 text-sm text-gray-600">
+                        這其實就是 SetupService.gs 的 <code class="bg-gray-200 px-1 rounded">bootstrapSystem()</code>——它連試算表和 Drive 資料夾都是自動建立，完全不需手動建立任何 Google 資源。
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 7. 建議方案 -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">7</span>
+                對本專案的建議
+            </h2>
+            <div class="bg-white rounded-2xl shadow-lg p-8">
+                <p class="text-gray-600 mb-6">考量 <code class="bg-gray-200 px-1 rounded">gas-auth-spa-template</code> 目前的狀況（無 <code class="bg-gray-200 px-1 rounded">package.json</code>、僅有 <code class="bg-gray-200 px-1 rounded">Code.js</code> + <code class="bg-gray-200 px-1 rounded">index.html</code>、使用 Google Sheets 作為資料庫），最適合的方案組合是：</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-green-50 rounded-xl p-6 border-2 border-green-300">
+                        <div class="font-bold text-green-700 text-lg mb-2">階段一：自體初始化（方案 B）</div>
+                        <p class="text-sm text-gray-600">在 <code class="bg-gray-200 px-1 rounded">Code.js</code> 中加入初始化邏輯，讓 Web App 第一次開啟時自動建立「網站參數設定」與「帳號管理」工作表。這已經是部分實作了（<code class="bg-gray-200 px-1 rounded">getWebsiteParameter</code> 有 lazy init），只需補上網頁引導精靈。</p>
+                    </div>
+                    <div class="bg-blue-50 rounded-xl p-6 border-2 border-blue-300">
+                        <div class="font-bold text-blue-700 text-lg mb-2">階段二：setup.sh（方案 A）</div>
+                        <p class="text-sm text-gray-600">提供一個 bash script 讓有 clasp 的使用者可以一鍵部署。即使專案沒有 <code class="bg-gray-200 px-1 rounded">package.json</code>，只要使用者全域裝了 clasp，就能用 <code class="bg-gray-200 px-1 rounded">bash setup.sh</code> 完成部署。</p>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 rounded-xl p-6 mt-6">
+                    <p class="text-gray-600 font-bold">核心架構 — 加入後端初始化服務：</p>
+                    <div class="code-block text-sm bg-gray-900 text-green-400 rounded-xl p-4 mt-3 overflow-x-auto">
+<pre>// Code.js 新增模組
+var SetupService = (function() {
+  var SCHEMAS = {
+    '網站參數設定': ['參數項目', '參數內容', '參數說明'],
+    '帳號管理':     ['Email', '姓名', '人員編號', '部門單位', '角色', '狀態', '備註']
+  };
+
+  function getSystemStatus() {
+    // 回傳 { isInitialized, sheetsStatus, warnings, blockingIssues }
+  }
+
+  function runInitializeWizard(settings) {
+    // 建立工作表、寫入預設值、註冊管理員
+  }
+
+  return { getSystemStatus: getSystemStatus, runInitializeWizard: runInitializeWizard };
+})();</pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-gray-800 text-gray-400 py-8 px-6 text-center text-sm">
+        <p>初始化建置流程解析 - 參考 gas-school-lunch-management-system</p>
+        <p class="mt-2">最後更新：2026-07-23</p>
+    </footer>
+</body>
+</html>

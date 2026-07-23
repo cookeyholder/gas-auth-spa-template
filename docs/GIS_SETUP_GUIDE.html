@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Identity Services (GIS) 設定教學 - GAS Auth SPA Template</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Fira Sans', sans-serif; background: #f8fafc; }
+        .code-block { font-family: 'Menlo', 'Monaco', 'Courier New', monospace; }
+        section { scroll-margin-top: 2rem; }
+    </style>
+</head>
+<body class="min-h-screen">
+    <header class="bg-gradient-to-r from-cyan-600 to-teal-700 text-white py-12 px-6">
+        <div class="max-w-6xl mx-auto">
+            <h1 class="text-4xl font-bold mb-4">Google Identity Services (GIS) 設定教學</h1>
+            <p class="text-xl text-cyan-100">在 Google Apps Script Web 應用程式中整合 GIS 進行使用者認證</p>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto py-12 px-6">
+
+        <!-- 資料來源 -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">1</span>
+                資料來源
+            </h2>
+
+            <div class="bg-white rounded-2xl shadow-lg p-8 mb-6">
+                <h3 class="font-bold text-gray-800 text-lg mb-4">官方文件</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="py-2 px-3 text-left text-gray-600">資料來源</th>
+                                <th class="py-2 px-3 text-left text-gray-600">連結</th>
+                                <th class="py-2 px-3 text-left text-gray-600">說明</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-b border-gray-100"><td class="py-2 px-3 text-gray-600">Google Identity 官方首頁</td><td class="py-2 px-3"><a href="https://developers.google.com/identity" class="text-cyan-600 hover:underline break-all">developers.google.com/identity</a></td><td class="py-2 px-3 text-gray-500">GIS 產品總覽</td></tr>
+                            <tr class="border-b border-gray-100"><td class="py-2 px-3 text-gray-600">Sign in with Google</td><td class="py-2 px-3"><a href="https://developers.google.com/identity/siwg" class="text-cyan-600 hover:underline break-all">developers.google.com/identity/siwg</a></td><td class="py-2 px-3 text-gray-500">認證功能介紹</td></tr>
+                            <tr class="border-b border-gray-100"><td class="py-2 px-3 text-gray-600">Web 實作指南</td><td class="py-2 px-3"><a href="https://developers.google.com/identity/gsi/web/guides/overview" class="text-cyan-600 hover:underline break-all">developers.google.com/identity/gsi/web/guides/overview</a></td><td class="py-2 px-3 text-gray-500">Web 平台整合指南</td></tr>
+                            <tr class="border-b border-gray-100"><td class="py-2 px-3 text-gray-600">OAuth 2.0 用戶端 ID 設定</td><td class="py-2 px-3"><a href="https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid" class="text-cyan-600 hover:underline break-all">developers.google.com/identity/gsi/web/guides/get-google-api-clientid</a></td><td class="py-2 px-3 text-gray-500">Client ID 申請步驟</td></tr>
+                            <tr class="border-b border-gray-100"><td class="py-2 px-3 text-gray-600">OAuth 同意畫面設定</td><td class="py-2 px-3"><a href="https://console.developers.google.com/auth/branding" class="text-cyan-600 hover:underline break-all">console.developers.google.com/auth/branding</a></td><td class="py-2 px-3 text-gray-500">Branding 頁面</td></tr>
+                            <tr class="border-b border-gray-100"><td class="py-2 px-3 text-gray-600">憑證管理頁面</td><td class="py-2 px-3"><a href="https://console.developers.google.com/auth/clients" class="text-cyan-600 hover:underline break-all">console.developers.google.com/auth/clients</a></td><td class="py-2 px-3 text-gray-500">Client ID 建立頁面</td></tr>
+                            <tr class="border-b border-gray-100"><td class="py-2 px-3 text-gray-600">Token 驗證指南</td><td class="py-2 px-3"><a href="https://developers.google.com/identity/gsi/web/guides/verify-google-id-token" class="text-cyan-600 hover:underline break-all">developers.google.com/identity/gsi/web/guides/verify-google-id-token</a></td><td class="py-2 px-3 text-gray-500">後端驗證方法</td></tr>
+                            <tr class="border-b border-gray-100"><td class="py-2 px-3 text-gray-600">JavaScript API 參考</td><td class="py-2 px-3"><a href="https://developers.google.com/identity/gsi/web/reference/js-reference" class="text-cyan-600 hover:underline break-all">developers.google.com/identity/gsi/web/reference/js-reference</a></td><td class="py-2 px-3 text-gray-500">GIS JS API</td></tr>
+                            <tr class="border-b border-gray-100"><td class="py-2 px-3 text-gray-600">HTML API 參考</td><td class="py-2 px-3"><a href="https://developers.google.com/identity/gsi/web/reference/html-reference" class="text-cyan-600 hover:underline break-all">developers.google.com/identity/gsi/web/reference/html-reference</a></td><td class="py-2 px-3 text-gray-500">GIS HTML 屬性</td></tr>
+                            <tr class="border-b border-gray-100"><td class="py-2 px-3 text-gray-600">支援的瀏覽器</td><td class="py-2 px-3"><a href="https://developers.google.com/identity/gsi/web/guides/supported-browsers" class="text-cyan-600 hover:underline break-all">developers.google.com/identity/gsi/web/guides/supported-browsers</a></td><td class="py-2 px-3 text-gray-500">相容性列表</td></tr>
+                            <tr><td class="py-2 px-3 text-gray-600">品牌使用規範</td><td class="py-2 px-3"><a href="https://developers.google.com/identity/branding-guidelines" class="text-cyan-600 hover:underline break-all">developers.google.com/identity/branding-guidelines</a></td><td class="py-2 px-3 text-gray-500">Logo 與 UI 規範</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-lg p-8">
+                <h3 class="font-bold text-gray-800 text-lg mb-4">GAS + GIS 整合相關</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="py-2 px-3 text-left text-gray-600">資料來源</th>
+                                <th class="py-2 px-3 text-left text-gray-600">連結</th>
+                                <th class="py-2 px-3 text-left text-gray-600">說明</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-b border-gray-100"><td class="py-2 px-3 text-gray-600">GAS Troubleshooting</td><td class="py-2 px-3"><a href="https://developers.google.com/apps-script/guides/support/troubleshooting" class="text-cyan-600 hover:underline break-all">developers.google.com/apps-script/guides/support/troubleshooting</a></td><td class="py-2 px-3 text-gray-500">Apps Script 除錯指南</td></tr>
+                            <tr class="border-b border-gray-100"><td class="py-2 px-3 text-gray-600">Auth Troubleshooting</td><td class="py-2 px-3"><a href="https://developers.google.com/apps-script/api/troubleshoot-authentication-authorization" class="text-cyan-600 hover:underline break-all">developers.google.com/apps-script/api/troubleshoot-authentication-authorization</a></td><td class="py-2 px-3 text-gray-500">認證問題除錯</td></tr>
+                            <tr class="border-b border-gray-100"><td class="py-2 px-3 text-gray-600">CORS 問題討論</td><td class="py-2 px-3"><a href="https://stackoverflow.com/questions/79392832" class="text-cyan-600 hover:underline break-all">stackoverflow.com/questions/79392832</a></td><td class="py-2 px-3 text-gray-500">Stack Overflow 討論</td></tr>
+                            <tr class="border-b border-gray-100"><td class="py-2 px-3 text-gray-600">Invalid Origin 問題</td><td class="py-2 px-3"><a href="https://stackoverflow.com/questions/65791839" class="text-cyan-600 hover:underline break-all">stackoverflow.com/questions/65791839</a></td><td class="py-2 px-3 text-gray-500">網域設定問題</td></tr>
+                            <tr><td class="py-2 px-3 text-gray-600">FedCM 遷移指南</td><td class="py-2 px-3"><a href="https://developers.google.com/identity/gsi/web/guides/fedcm-migration" class="text-cyan-600 hover:underline break-all">developers.google.com/identity/gsi/web/guides/fedcm-migration</a></td><td class="py-2 px-3 text-gray-500">FedCM 整合</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 什麼是 GIS -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">2</span>
+                什麼是 Google Identity Services？
+            </h2>
+            <div class="bg-white rounded-2xl shadow-lg p-8">
+                <p class="text-gray-600 mb-6">Google Identity Services (GIS) 是 Google 官方提供的使用者認證解決方案，支援：</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                    <div class="bg-cyan-50 rounded-xl p-4">
+                        <div class="font-bold text-cyan-600 mb-1">Sign in with Google 按鈕</div>
+                        <p class="text-gray-600 text-sm">一鍵登入，無需密碼</p>
+                    </div>
+                    <div class="bg-cyan-50 rounded-xl p-4">
+                        <div class="font-bold text-cyan-600 mb-1">One Tap 提示</div>
+                        <p class="text-gray-600 text-sm">自動偵測已登入的 Google 帳號，一鍵授權</p>
+                    </div>
+                    <div class="bg-cyan-50 rounded-xl p-4">
+                        <div class="font-bold text-cyan-600 mb-1">自動登入</div>
+                        <p class="text-gray-600 text-sm">回訪使用者可自動恢復登入狀態</p>
+                    </div>
+                </div>
+
+                <h3 class="font-bold text-gray-800 text-lg mb-4">核心優勢</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="py-2 px-3 text-left text-gray-600">特點</th>
+                                <th class="py-2 px-3 text-left text-gray-600">說明</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-2 px-3 font-medium text-gray-700">簡化開發</td>
+                                <td class="py-2 px-3 text-gray-600">無需管理密碼雜湊、忘記密碼等功能</td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-2 px-3 font-medium text-gray-700">提高轉換率</td>
+                                <td class="py-2 px-3 text-gray-600">減少註冊表單填寫，最高可提升 8 倍轉換率</td>
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-2 px-3 font-medium text-gray-700">跨平台一致性</td>
+                                <td class="py-2 px-3 text-gray-600">Web、Android、iOS 統一體驗</td>
+                            </tr>
+                            <tr>
+                                <td class="py-2 px-3 font-medium text-gray-700">安全性</td>
+                                <td class="py-2 px-3 text-gray-600">利用 Google 帳號的安全機制，減少密碼外洩風險</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 環境需求 -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">3</span>
+                環境需求
+            </h2>
+            <div class="bg-white rounded-2xl shadow-lg p-8">
+                <ul class="space-y-3 text-gray-600">
+                    <li class="flex items-start gap-3">
+                        <span class="w-5 h-5 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-xs flex-shrink-0 mt-0.5">✓</span>
+                        <span>Google Cloud 專案（可新建立或使用現有專案）</span>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="w-5 h-5 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-xs flex-shrink-0 mt-0.5">✓</span>
+                        <span>Google Apps Script 專案</span>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="w-5 h-5 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-xs flex-shrink-0 mt-0.5">✓</span>
+                        <span>Google 試算表（綁定 GAS 專案）</span>
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- 設定步驟 -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">4</span>
+                設定步驟
+            </h2>
+
+            <!-- Step 1-5 -->
+            <div class="space-y-6">
+                <div class="bg-white rounded-2xl shadow-lg p-8">
+                    <h3 class="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2">
+                        <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm font-bold">1</span>
+                        建立 Google Cloud 專案
+                    </h3>
+                    <ol class="space-y-2 text-gray-600 list-decimal list-inside">
+                        <li>前往 <a href="https://console.cloud.google.com/" class="text-cyan-600 hover:underline">Google Cloud Console</a></li>
+                        <li>點擊左上角「選取專案」&gt;「新增專案」</li>
+                        <li>輸入專案名稱（例如：<code class="bg-gray-200 px-1 rounded">my-gas-auth-app</code>）</li>
+                        <li>點擊「建立」</li>
+                    </ol>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-lg p-8">
+                    <h3 class="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2">
+                        <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm font-bold">2</span>
+                        設定 OAuth 同意畫面
+                    </h3>
+                    <ol class="space-y-3 text-gray-600 list-decimal list-inside">
+                        <li>點擊左側選單：<strong>「API 和服務」&gt;「OAuth 同意畫面」</strong></li>
+                        <li>選擇使用者類型：
+                            <ul class="list-disc list-inside ml-6 mt-1 text-sm space-y-1">
+                                <li><strong>Internal</strong>：僅限 Google Workspace 組織內部使用者</li>
+                                <li><strong>External</strong>：開放給所有 Google 帳號使用者（含 @gmail.com）</li>
+                            </ul>
+                        </li>
+                        <li>填寫必要資訊：應用程式名稱、使用者支援電子郵件、開發人員聯絡資訊</li>
+                        <li>點擊「儲存並繼續」</li>
+                    </ol>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-lg p-8">
+                    <h3 class="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2">
+                        <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm font-bold">3</span>
+                        設定範圍 (Scopes)
+                    </h3>
+                    <ol class="space-y-3 text-gray-600 list-decimal list-inside">
+                        <li>在「OAuth 同意畫面」頁面，點擊「新增或移除範圍」</li>
+                        <li>勾選以下三個預設範圍：
+                            <div class="ml-6 mt-2 flex flex-wrap gap-2">
+                                <span class="bg-gray-100 text-gray-700 px-3 py-1 rounded text-xs font-mono">.../auth/userinfo.email</span>
+                                <span class="bg-gray-100 text-gray-700 px-3 py-1 rounded text-xs font-mono">.../auth/userinfo.profile</span>
+                                <span class="bg-gray-100 text-gray-700 px-3 py-1 rounded text-xs font-mono">openid</span>
+                            </div>
+                        </li>
+                        <li>點擊「更新」&gt;「儲存並繼續」</li>
+                    </ol>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-lg p-8">
+                    <h3 class="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2">
+                        <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm font-bold">4</span>
+                        建立 OAuth 2.0 用戶端 ID
+                    </h3>
+                    <ol class="space-y-3 text-gray-600 list-decimal list-inside">
+                        <li>點擊左側選單：<strong>「API 和服務」&gt;「憑證」</strong></li>
+                        <li>點擊上方 <strong>「+ 建立憑證」&gt;「OAuth 用戶端 ID」</strong></li>
+                        <li><strong>應用程式類型</strong>：選擇 <strong>「Web 應用程式」</strong></li>
+                        <li><strong>名稱</strong>：方便辨識的名稱（例如：<code class="bg-gray-200 px-1 rounded">GAS SPA Client</code>）</li>
+                        <li>設定 <strong>已授權的 JavaScript 來源</strong>：填入 <code class="bg-gray-200 px-1 rounded">https://script.google.com</code></li>
+                        <li>設定 <strong>已授權的重新導向 URI</strong>：填入 <code class="bg-gray-200 px-1 rounded">https://script.google.com</code></li>
+                        <li>點擊 <strong>「建立」</strong></li>
+                    </ol>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-lg p-8">
+                    <h3 class="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2">
+                        <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm font-bold">5</span>
+                        複製 Client ID
+                    </h3>
+                    <div class="bg-gray-50 rounded-xl p-6 space-y-3">
+                        <p class="text-gray-600">建立完成後，會彈出視窗顯示 <strong>「您的用戶端 ID」</strong>。</p>
+                        <div class="code-block text-sm bg-gray-900 text-green-400 rounded-xl p-4 overflow-x-auto">
+                            <pre>格式範例：1234567890-abc123def456.apps.googleusercontent.com</pre>
+                        </div>
+                        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-700">
+                            <strong>請複製此 ID</strong>，接下來要設定到 GAS 專案中。
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 整合到 GAS 專案 -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">5</span>
+                整合到 GAS 專案
+            </h2>
+
+            <div class="bg-white rounded-2xl shadow-lg p-8 mb-6">
+                <h3 class="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2">
+                    <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm font-bold">6</span>
+                    設定試算表參數
+                </h3>
+                <ol class="space-y-3 text-gray-600 list-decimal list-inside">
+                    <li>開啟與 GAS 專案綁定的 <strong>Google 試算表</strong></li>
+                    <li>找到或建立 <strong>「網站參數設定」</strong> 工作表</li>
+                    <li>在 <strong>「OAuth Client ID」</strong> 這一列的 <strong>「參數內容」</strong> 欄位中，貼上您的 Client ID</li>
+                    <li>儲存試算表</li>
+                </ol>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-lg p-8 mb-6">
+                <h3 class="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2">
+                    <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm font-bold">7</span>
+                    確認前端程式碼
+                </h3>
+                <p class="text-gray-600 mb-4">您的 <code class="bg-gray-200 px-1 rounded">index.html</code> 應該包含以下 GIS 整合程式碼：</p>
+
+                <h4 class="font-bold text-gray-700 mb-2">7.1 載入 GIS SDK</h4>
+                <div class="code-block text-sm bg-gray-900 text-green-400 rounded-xl p-4 mb-6 overflow-x-auto">
+                    <pre>&lt;script src="https://accounts.google.com/gsi/client" async defer&gt;&lt;/script&gt;</pre>
+                </div>
+
+                <h4 class="font-bold text-gray-700 mb-2">7.2 初始化 Google 認證</h4>
+                <div class="code-block text-sm bg-gray-900 text-green-400 rounded-xl p-4 mb-6 overflow-x-auto">
+<pre>function initGoogleAuth(clientId) {
+    google.accounts.id.initialize({
+        client_id: clientId,
+        callback: handleCredentialResponse,
+        auto_select: true
+    });
+    
+    // 渲染登入按鈕
+    google.accounts.id.renderButton(
+        document.getElementById("g_id_signin"),
+        { 
+            theme: "outline", 
+            size: "large", 
+            width: "250", 
+            shape: "pill" 
+        }
+    );
+    
+    // 顯示 One Tap 提示
+    google.accounts.id.prompt();
+}</pre>
+                </div>
+
+                <h4 class="font-bold text-gray-700 mb-2">7.3 處理認證回應</h4>
+                <div class="code-block text-sm bg-gray-900 text-green-400 rounded-xl p-4 mb-6 overflow-x-auto">
+<pre>function handleCredentialResponse(response) {
+    const idToken = response.credential;
+    
+    // 將 ID Token 傳送到後端驗證
+    google.script.run
+        .withSuccessHandler(function(resJson) {
+            const res = JSON.parse(resJson);
+            if (res.status === 'success') {
+                // 登入成功
+                loginSuccess(res.user);
+            } else {
+                // 登入失敗
+                showUnauthorized(res.message);
+            }
+        })
+        .withFailureHandler(function(err) {
+            showError('伺服器驗證失敗：' + err);
+        })
+        .loginWithToken(idToken);
+}</pre>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-lg p-8">
+                <h3 class="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2">
+                    <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm font-bold">8</span>
+                    後端 Token 驗證
+                </h3>
+                <p class="text-gray-600 mb-4">在 <code class="bg-gray-200 px-1 rounded">Code.js</code> 中，使用 Google 的 Token Info API 驗證 ID Token：</p>
+                <div class="code-block text-sm bg-gray-900 text-green-400 rounded-xl p-6 overflow-x-auto">
+<pre>function validateIdToken(token) {
+    if (!token) throw new Error("缺少 Token");
+    
+    // 取得專案的 Client ID
+    const clientId = getWebsiteParameter("OAuth Client ID");
+    
+    // 呼叫 Google Token Info API 驗證
+    const response = UrlFetchApp.fetch(
+        `https://oauth2.googleapis.com/tokeninfo?id_token=${token}`,
+        { muteHttpExceptions: true }
+    );
+    const result = JSON.parse(response.getContentText());
+    
+    if (response.getResponseCode() !== 200 || result.error) {
+        throw new Error("Token 驗證失敗: " + (result.error_description || "無效的 Token"));
+    }
+    
+    // 驗證 Audience
+    if (clientId && result.aud !== clientId) {
+        throw new Error("Token 的對象不符 (Audience mismatch)");
+    }
+    
+    // 驗證 Issuer
+    if (result.iss !== "accounts.google.com" && 
+        result.iss !== "https://accounts.google.com") {
+        throw new Error("無效的 Issuer");
+    }
+    
+    return result;
+}</pre>
+                </div>
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-6 text-sm text-amber-700">
+                    <strong>正式環境注意事項：</strong><code class="bg-amber-100 px-1 rounded">tokeninfo</code> 端點方便除錯，但 Google 官方文件指出該端點可能被限流或出現間歇性錯誤。低流量的 GAS 應用可直接使用；<strong>高流量或正式環境建議改用本機 JWT 公鑰驗證</strong>，避免依賴遠端端點。詳見 <a href="https://developers.google.com/identity/gsi/web/guides/verify-google-id-token" class="text-cyan-600 hover:underline">驗證 Google ID Token</a>。
+                </div>
+            </div>
+        </section>
+
+        <!-- 安全性考量 -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">6</span>
+                安全性考量
+            </h2>
+
+            <div class="bg-white rounded-2xl shadow-lg p-8 mb-6">
+                <h3 class="font-bold text-gray-800 text-lg mb-4">Content Security Policy (CSP)</h3>
+                <p class="text-gray-600 mb-3">如果您使用 CSP，需允許 GIS 相關網域：</p>
+                <div class="code-block text-sm bg-gray-900 text-green-400 rounded-xl p-4 overflow-x-auto">
+<pre>Content-Security-Policy: 
+    script-src https://accounts.google.com/gsi/client; 
+    frame-src https://accounts.google.com/gsi/; 
+    connect-src https://accounts.google.com/gsi/;</pre>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-lg p-8 mb-6">
+                <h3 class="font-bold text-gray-800 text-lg mb-4">Cross-Origin-Opener-Policy (COOP)</h3>
+                <p class="text-gray-600 mb-3">當 FedCM 停用時，需設定：</p>
+                <div class="code-block text-sm bg-gray-900 text-green-400 rounded-xl p-4 overflow-x-auto">
+<pre>Cross-Origin-Opener-Policy: same-origin; same-origin-allow-popups</pre>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-lg p-8">
+                <h3 class="font-bold text-gray-800 text-lg mb-4">安全最佳實踐</h3>
+                <ul class="space-y-3 text-gray-600">
+                    <li class="flex items-start gap-3">
+                        <span class="w-5 h-5 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-xs flex-shrink-0 mt-0.5">!</span>
+                        <span><strong>永遠不要</strong>在前端暴露 Client Secret</span>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs flex-shrink-0 mt-0.5">!</span>
+                        <span><strong>在後端驗證 ID Token</strong>，不要僅依賴前端回傳的資訊</span>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs flex-shrink-0 mt-0.5">!</span>
+                        <span><strong>驗證 Audience (aud)</strong> 確保 Token 是發給您的應用程式</span>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs flex-shrink-0 mt-0.5">!</span>
+                        <span><strong>驗證 Issuer (iss)</strong> 確保 Token 來自 Google</span>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs flex-shrink-0 mt-0.5">!</span>
+                        <span><strong>檢查 Token 過期時間</strong> 雖然 Token Info API 會檢查，但建議雙重確認</span>
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- 測試與除錯 -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">7</span>
+                測試與除錯
+            </h2>
+            <div class="bg-white rounded-2xl shadow-lg p-8">
+                <h3 class="font-bold text-gray-800 text-lg mb-4">測試步驟</h3>
+                <ol class="space-y-3 text-gray-600 list-decimal list-inside">
+                    <li>部署 Web App（執行身分：我，存取權限：任何人）</li>
+                    <li>開啟 Web App 網址</li>
+                    <li>點擊 Google 登入按鈕</li>
+                    <li>完成 Google 帳號授權</li>
+                    <li>確認成功跳轉至儀表板</li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- FAQ -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">8</span>
+                常見問題 (FAQ)
+            </h2>
+
+            <div class="space-y-4">
+                <!-- Q1 -->
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <h3 class="font-bold text-gray-800 mb-2">Q1: 為什麼登入按鈕不出現？</h3>
+                    <p class="font-medium text-gray-700 text-sm mb-2">可能原因：</p>
+                    <ul class="list-disc list-inside text-sm text-gray-600 mb-3 space-y-1">
+                        <li>Client ID 未正確設定或格式錯誤</li>
+                        <li>Authorized JavaScript Origins 未正確設定</li>
+                        <li>GIS SDK 載入失敗</li>
+                    </ul>
+                    <p class="font-medium text-gray-700 text-sm mb-2">解決方案：</p>
+                    <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                        <li>確認 Client ID 格式為 <code class="bg-gray-200 px-1 rounded">xxxxx.apps.googleusercontent.com</code></li>
+                        <li>確認 Authorized JavaScript Origins 設定為 <code class="bg-gray-200 px-1 rounded">https://script.google.com</code></li>
+                        <li>檢查瀏覽器控制台是否有錯誤訊息</li>
+                        <li>確認 <code class="bg-gray-200 px-1 rounded">script</code> 標籤已正確載入</li>
+                    </ul>
+                    <div class="mt-3 text-sm">
+                        <span class="text-gray-500">相關討論：</span>
+                        <a href="https://www.xjavascript.com/blog/idpiframe-initialization-failed-in-google-sign-in-from-localhost" class="text-cyan-600 hover:underline">Stack Overflow: idpiframe_initialization_failed</a>
+                    </div>
+                </div>
+
+                <!-- Q2 -->
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <h3 class="font-bold text-gray-800 mb-2">Q2: 出現 "Invalid origin: Uses a forbidden domain" 錯誤</h3>
+                    <p class="text-sm text-gray-600 mb-3">GAS Web App 實際執行的網域是 <code class="bg-gray-200 px-1 rounded">*.script.googleusercontent.com</code>，但 Google <strong>不允許</strong>將 <code class="bg-gray-200 px-1 rounded">googleusercontent.com</code> 網域加入 Authorized JavaScript Origins。</p>
+                    <p class="font-medium text-gray-700 text-sm mb-2">解決方案：</p>
+                    <p class="text-sm text-gray-600">使用 <code class="bg-gray-200 px-1 rounded">https://script.google.com</code> 作為 Authorized JavaScript Origins（本專案已採用此設定）。</p>
+                    <div class="mt-3 text-sm space-y-1">
+                        <p><span class="text-gray-500">相關討論：</span></p>
+                        <ul class="list-disc list-inside space-y-1">
+                            <li><a href="https://stackoverflow.com/questions/65791839" class="text-cyan-600 hover:underline">Stack Overflow: Invalid origin Uses a forbidden domain</a></li>
+                            <li><a href="https://issuetracker.google.com/issues/170740549" class="text-cyan-600 hover:underline">Google Issue Tracker #170740549</a></li>
+                            <li><a href="https://discuss.google.dev/t/stuck-creating-oauth-client-id-app-script-invalid-origin-error-help-needed/183315" class="text-cyan-600 hover:underline">Google Developer Forums: Invalid Origin Error</a></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Q3 -->
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <h3 class="font-bold text-gray-800 mb-2">Q3: 出現 CORS 跨網域錯誤</h3>
+                    <p class="text-sm text-gray-600 mb-3">GAS Web App <strong>不支援 OPTIONS 預檢請求 (preflight)</strong>，從外部網域直接呼叫 GAS 時會觸發 CORS 錯誤。</p>
+                    <p class="font-medium text-gray-700 text-sm mb-2">解決方案：</p>
+                    <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                        <li><strong>推薦</strong>：使用 <code class="bg-gray-200 px-1 rounded">google.script.run</code> 內建呼叫（本專案已採用）</li>
+                        <li>或將 Content-Type 改為 <code class="bg-gray-200 px-1 rounded">text/plain;charset=utf-8</code> 繞過預檢</li>
+                        <li>或使用 FormData 而非 JSON</li>
+                    </ul>
+                    <div class="mt-3 text-sm space-y-1">
+                        <p><span class="text-gray-500">相關討論：</span></p>
+                        <ul class="list-disc list-inside space-y-1">
+                            <li><a href="https://stackoverflow.com/questions/79392832" class="text-cyan-600 hover:underline">Stack Overflow: CORS in Google Apps Script</a></li>
+                            <li><a href="https://diyavijay.medium.com/struggling-with-cors-in-google-apps-script-heres-the-fix-e3eec09f07dd" class="text-cyan-600 hover:underline">Medium: Struggling with CORS in Google Apps Script</a></li>
+                            <li><a href="https://iith.dev/blog/app-script-cors/" class="text-cyan-600 hover:underline">Lambda IITH: Fixing CORS Errors in Google Apps Script</a></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Q4 -->
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <h3 class="font-bold text-gray-800 mb-2">Q4: 跨網域使用者登入後看不到 Email</h3>
+                    <p class="text-sm text-gray-600 mb-3">在傳統 GAS「以我身分執行」模式下，無法取得不同網域使用者的 Email。</p>
+                    <p class="font-medium text-gray-700 text-sm mb-2">解決方案：</p>
+                    <p class="text-sm text-gray-600">使用 GIS + JWT Token 驗證（本專案已採用此方案），前端取得 ID Token 後傳送到後端驗證，可準確取得跨網域使用者的 Email。</p>
+                </div>
+
+                <!-- Q5 -->
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <h3 class="font-bold text-gray-800 mb-2">Q5: 出現「未經驗證的應用程式」警告</h3>
+                    <p class="text-sm text-gray-600 mb-3">OAuth 同意畫面設為 External 模式時，在通過 Google 審核前會看到此警告。</p>
+                    <p class="font-medium text-gray-700 text-sm mb-2">解決方案：</p>
+                    <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                        <li>開發測試階段：點擊「進階」&gt;「繼續前往」即可</li>
+                        <li>正式上線：提交應用程式給 Google 審核</li>
+                    </ul>
+                    <div class="mt-3 text-sm">
+                        <span class="text-gray-500">相關文件：</span>
+                        <a href="https://support.google.com/cloud/answer/9110914" class="text-cyan-600 hover:underline">OAuth verification requirements</a>
+                    </div>
+                </div>
+
+                <!-- Q6 -->
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <h3 class="font-bold text-gray-800 mb-2">Q6: One Tap 提示不出現</h3>
+                    <p class="font-medium text-gray-700 text-sm mb-2">可能原因：</p>
+                    <ul class="list-disc list-inside text-sm text-gray-600 mb-3 space-y-1">
+                        <li>使用者尚未登入 Google 帳號</li>
+                        <li>瀏覽器封鎖第三方 Cookie</li>
+                        <li>使用者曾關閉 One Tap 提示</li>
+                    </ul>
+                    <p class="font-medium text-gray-700 text-sm mb-2">解決方案：</p>
+                    <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                        <li>確認 <code class="bg-gray-200 px-1 rounded">google.accounts.id.prompt()</code> 已呼叫</li>
+                        <li>檢查瀏覽器設定是否允許第三方 Cookie</li>
+                        <li>使用 <code class="bg-gray-200 px-1 rounded">google.accounts.id.prompt((notification) =&gt; console.log(notification))</code> 除錯</li>
+                    </ul>
+                    <div class="mt-3 text-sm">
+                        <span class="text-gray-500">相關文件：</span>
+                        <a href="https://developers.google.com/identity/gsi/web/guides/display-google-one-tap" class="text-cyan-600 hover:underline">Display Google One Tap</a>
+                    </div>
+                </div>
+
+                <!-- Q7 -->
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <h3 class="font-bold text-gray-800 mb-2">Q7: Token 驗證失敗</h3>
+                    <p class="font-medium text-gray-700 text-sm mb-2">可能原因：</p>
+                    <ul class="list-disc list-inside text-sm text-gray-600 mb-3 space-y-1">
+                        <li>Client ID 不符（前端與後端設定不一致）</li>
+                        <li>Token 已過期</li>
+                        <li>Token Info API 呼叫失敗</li>
+                    </ul>
+                    <p class="font-medium text-gray-700 text-sm mb-2">解決方案：</p>
+                    <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                        <li>確認試算表中的 OAuth Client ID 與 GCP 設定一致</li>
+                        <li>檢查 <code class="bg-gray-200 px-1 rounded">validateIdToken</code> 函式的錯誤訊息</li>
+                        <li>確認網路連線正常</li>
+                    </ul>
+                    <div class="mt-3 text-sm">
+                        <span class="text-gray-500">相關文件：</span>
+                        <a href="https://developers.google.com/identity/gsi/web/guides/verify-google-id-token" class="text-cyan-600 hover:underline">Verify the Google ID token on your server side</a>
+                    </div>
+                </div>
+
+                <!-- Q8 -->
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <h3 class="font-bold text-gray-800 mb-2">Q8: GAS 網址經常變動導致設定失效</h3>
+                    <p class="text-sm text-gray-600 mb-3">GAS 部署後的網址可能因重新部署而變動（例如 <code class="bg-gray-200 px-1 rounded">script.googleusercontent.com</code> 網址改變）。</p>
+                    <p class="font-medium text-gray-700 text-sm mb-2">解決方案：</p>
+                    <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                        <li>使用 <code class="bg-gray-200 px-1 rounded">https://script.google.com</code> 作為 Authorized JavaScript Origins（不會變動）</li>
+                        <li>部署時選擇「新增部署」而非「新增版本」，可保持網址不變</li>
+                    </ul>
+                    <div class="mt-3 text-sm">
+                        <span class="text-gray-500">相關討論：</span>
+                        <a href="https://github.com/google/google-api-javascript-client/issues/661" class="text-cyan-600 hover:underline">GitHub: Apps Script oauth2 scopes issues</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 延伸學習資源 -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">9</span>
+                延伸學習資源
+            </h2>
+            <div class="bg-white rounded-2xl shadow-lg p-8 overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="py-2 px-3 text-left text-gray-600">資源類型</th>
+                            <th class="py-2 px-3 text-left text-gray-600">連結</th>
+                            <th class="py-2 px-3 text-left text-gray-600">說明</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="border-b border-gray-100"><td class="py-2 px-3 text-gray-600">Codelab</td><td class="py-2 px-3"><a href="https://codelabs.developers.google.com/codelabs/sign-in-with-google-button" class="text-cyan-600 hover:underline break-all">codelabs.developers.google.com/codelabs/sign-in-with-google-button</a></td><td class="py-2 px-3 text-gray-500">實作登入按鈕</td></tr>
+                        <tr class="border-b border-gray-100"><td class="py-2 px-3 text-gray-600">Codelab</td><td class="py-2 px-3"><a href="https://codelabs.developers.google.com/codelabs/google-one-tap" class="text-cyan-600 hover:underline break-all">codelabs.developers.google.com/codelabs/google-one-tap</a></td><td class="py-2 px-3 text-gray-500">實作 One Tap</td></tr>
+                        <tr class="border-b border-gray-100"><td class="py-2 px-3 text-gray-600">官方論壇</td><td class="py-2 px-3"><a href="https://discuss.google.dev/c/google-workspace/20" class="text-cyan-600 hover:underline break-all">discuss.google.dev/c/google-workspace/20</a></td><td class="py-2 px-3 text-gray-500">官方社群討論</td></tr>
+                        <tr class="border-b border-gray-100"><td class="py-2 px-3 text-gray-600">Stack Overflow</td><td class="py-2 px-3"><a href="https://stackoverflow.com/questions/tagged/google-apps-script" class="text-cyan-600 hover:underline break-all">stackoverflow.com/questions/tagged/google-apps-script</a></td><td class="py-2 px-3 text-gray-500">技術問答</td></tr>
+                        <tr class="border-b border-gray-100"><td class="py-2 px-3 text-gray-600">Reddit</td><td class="py-2 px-3"><a href="https://www.reddit.com/r/GoogleAppsScript/" class="text-cyan-600 hover:underline break-all">reddit.com/r/GoogleAppsScript/</a></td><td class="py-2 px-3 text-gray-500">非官方社群</td></tr>
+                        <tr><td class="py-2 px-3 text-gray-600">Issue Tracker</td><td class="py-2 px-3"><a href="https://issuetracker.google.com/issues?q=status:open%20componentid:191640" class="text-cyan-600 hover:underline break-all">issuetracker.google.com</a></td><td class="py-2 px-3 text-gray-500">問題回報</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 相關文件 -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">10</span>
+                相關文件
+            </h2>
+            <div class="bg-white rounded-2xl shadow-lg p-8">
+                <ul class="space-y-2 text-gray-600">
+                    <li><a href="./OAUTH_GUIDE.html" class="text-cyan-600 hover:underline font-medium">OAuth 2.0 認證申請與原理指南</a></li>
+                    <li><a href="../README.md" class="text-cyan-600 hover:underline font-medium">README.md</a></li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- 版本資訊 -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">11</span>
+                版本資訊
+            </h2>
+            <div class="bg-white rounded-2xl shadow-lg p-8 overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="py-2 px-3 text-left text-gray-600">日期</th>
+                            <th class="py-2 px-3 text-left text-gray-600">版本</th>
+                            <th class="py-2 px-3 text-left text-gray-600">變更內容</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="border-b border-gray-100">
+                            <td class="py-2 px-3 text-gray-600">2026-07-22</td>
+                            <td class="py-2 px-3">v1.0</td>
+                            <td class="py-2 px-3 text-gray-600">初版建立</td>
+                        </tr>
+                        <tr>
+                            <td class="py-2 px-3 text-gray-600">2026-07-22</td>
+                            <td class="py-2 px-3">v1.1</td>
+                            <td class="py-2 px-3 text-gray-600">新增 FAQ 與 GAS + GIS 整合相關資料來源</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-gray-800 text-gray-400 py-8 px-6 text-center text-sm">
+        <p>GAS Auth SPA Template - Google Identity Services 設定教學</p>
+        <p class="mt-2">最後更新：2026-07-22</p>
+    </footer>
+</body>
+</html>

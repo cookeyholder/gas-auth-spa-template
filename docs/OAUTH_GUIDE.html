@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OAuth 2.0 認證申請與原理指南 - GAS Auth SPA Template</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Fira Sans', sans-serif; background: #f8fafc; }
+        .code-block { font-family: 'Menlo', 'Monaco', 'Courier New', monospace; }
+        section { scroll-margin-top: 2rem; }
+    </style>
+</head>
+<body class="min-h-screen">
+    <header class="bg-gradient-to-r from-cyan-600 to-teal-700 text-white py-12 px-6">
+        <div class="max-w-6xl mx-auto">
+            <h1 class="text-4xl font-bold mb-4">Google OAuth 2.0 認證申請與原理指南</h1>
+            <p class="text-xl text-cyan-100">Google Identity Services 前端登入與後端 JWT 驗證設定教學</p>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto py-12 px-6">
+
+        <!-- 1. 基本原理 -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">1</span>
+                Google OAuth 2.0 的基本原理
+            </h2>
+            <div class="bg-white rounded-2xl shadow-lg p-8 space-y-4">
+                <p class="text-gray-600">在傳統的 GAS Web App 中，我們依賴伺服器端（GAS）去辨識使用者。但這在跨網域（例如 A 公司開發，B 公司學生使用）時會因為隱私限制而失效。</p>
+                <p class="text-gray-600 font-bold">OAuth 2.0 (OpenID Connect) 的運作流程如下：</p>
+                <div class="space-y-4">
+                    <div class="flex gap-4 items-start">
+                        <div class="w-10 h-10 bg-cyan-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">1</div>
+                        <div class="flex-1 bg-gray-50 rounded-xl p-4">
+                            <div class="font-bold text-gray-800">票券申請（前端）</div>
+                            <div class="text-gray-600 text-sm mt-1">當使用者點擊「Google 登入」按鈕，前端會直接導向 Google 的認證伺服器。</div>
+                        </div>
+                    </div>
+                    <div class="flex gap-4 items-start">
+                        <div class="w-10 h-10 bg-cyan-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">2</div>
+                        <div class="flex-1 bg-gray-50 rounded-xl p-4">
+                            <div class="font-bold text-gray-800">使用者授權</div>
+                            <div class="text-gray-600 text-sm mt-1">使用者同意授權（提供 Email 與基本資料）給您的應用程式。</div>
+                        </div>
+                    </div>
+                    <div class="flex gap-4 items-start">
+                        <div class="w-10 h-10 bg-cyan-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">3</div>
+                        <div class="flex-1 bg-gray-50 rounded-xl p-4">
+                            <div class="font-bold text-gray-800">核發票券 (ID Token)</div>
+                            <div class="text-gray-600 text-sm mt-1">Google 會核發一張經過加密簽章的「票券」（稱為 <strong>JWT - JSON Web Token</strong>）給前端。</div>
+                        </div>
+                    </div>
+                    <div class="flex gap-4 items-start">
+                        <div class="w-10 h-10 bg-teal-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">4</div>
+                        <div class="flex-1 bg-gray-50 rounded-xl p-4">
+                            <div class="font-bold text-gray-800">票券驗證（後端）</div>
+                            <div class="text-gray-600 text-sm mt-1">前端把這張票券傳給 GAS 後端。後端會聯絡 Google 驗證這張票券是否偽造、是否過期、以及這張票券是核發給誰的。</div>
+                        </div>
+                    </div>
+                    <div class="flex gap-4 items-start">
+                        <div class="w-10 h-10 bg-emerald-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">5</div>
+                        <div class="flex-1 bg-gray-50 rounded-xl p-4">
+                            <div class="font-bold text-gray-800">取得身分</div>
+                            <div class="text-gray-600 text-sm mt-1">驗證成功後，後端能百分之百確定使用者的 Email，進而根據試算表中的「角色」給予權限。</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. 如何取得 OAuth Client ID -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">2</span>
+                如何取得 OAuth 用戶端 ID
+            </h2>
+
+            <!-- Step 1 -->
+            <div class="bg-white rounded-2xl shadow-lg p-8 mb-6">
+                <h3 class="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2">
+                    <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm font-bold">1</span>
+                    進入 Google Cloud Console
+                </h3>
+                <ol class="space-y-2 text-gray-600 list-decimal list-inside">
+                    <li>前往 <a href="https://console.cloud.google.com/" class="text-cyan-600 hover:underline">Google Cloud Console</a></li>
+                    <li>在左上角點擊「選取專案」，然後點擊 <strong>「新增專案」</strong>（或是選取您現有的 GAS 關聯專案）</li>
+                </ol>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="bg-white rounded-2xl shadow-lg p-8 mb-6">
+                <h3 class="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2">
+                    <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm font-bold">2</span>
+                    設定「OAuth 同意畫面」(Consent Screen)
+                </h3>
+                <p class="text-gray-500 text-sm mb-4">在申請 ID 之前，必須先設定應用程式的對外資訊：</p>
+                <ol class="space-y-3 text-gray-600 list-decimal list-inside">
+                    <li>點擊左側選單：<strong>「API 和服務」 &gt; 「OAuth 同意畫面」</strong></li>
+                    <li><strong>User Type</strong>：
+                        <ul class="list-disc list-inside ml-6 mt-1 text-sm space-y-1">
+                            <li>如果您是 Google Workspace 內部使用，選 <strong>Internal</strong></li>
+                            <li>如果您要開放給外部 @gmail.com 或是其他網域的人使用，選 <strong>External</strong></li>
+                        </ul>
+                    </li>
+                    <li>填寫必要資訊：
+                        <ul class="list-disc list-inside ml-6 mt-1 text-sm space-y-1">
+                            <li><strong>應用程式名稱</strong>：例如「學生成績查詢系統」</li>
+                            <li><strong>使用者支援電子郵件</strong>：您的 Email</li>
+                            <li><strong>開發人員聯絡資訊</strong>：您的 Email</li>
+                        </ul>
+                    </li>
+                    <li><strong>範圍 (Scopes)</strong>：點擊「新增或移除範圍」，勾選以下三項：
+                        <div class="ml-6 mt-2 flex flex-wrap gap-2">
+                            <span class="bg-gray-100 text-gray-700 px-3 py-1 rounded text-xs font-mono">.../auth/userinfo.email</span>
+                            <span class="bg-gray-100 text-gray-700 px-3 py-1 rounded text-xs font-mono">.../auth/userinfo.profile</span>
+                            <span class="bg-gray-100 text-gray-700 px-3 py-1 rounded text-xs font-mono">openid</span>
+                        </div>
+                    </li>
+                    <li>點擊「儲存並繼續」直到完成</li>
+                </ol>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="bg-white rounded-2xl shadow-lg p-8 mb-6">
+                <h3 class="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2">
+                    <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm font-bold">3</span>
+                    建立 OAuth 2.0 用戶端 ID
+                </h3>
+                <ol class="space-y-3 text-gray-600 list-decimal list-inside">
+                    <li>點擊左側選單：<strong>「API 和服務」 &gt; 「憑證」</strong></li>
+                    <li>點擊上方 <strong>「+ 建立憑證」 &gt; 「OAuth 用戶端 ID」</strong></li>
+                    <li><strong>應用程式類型</strong>：選擇 <strong>「Web 應用程式」</strong></li>
+                    <li><strong>名稱</strong>：隨意填寫，方便辨識即可</li>
+                    <li><strong>已授權的 JavaScript 來源</strong>：
+                        <ul class="list-disc list-inside ml-6 mt-1 text-sm space-y-1">
+                            <li>點擊「新增 URI」</li>
+                            <li>填入：<code class="bg-gray-200 px-1 rounded">https://script.google.com</code></li>
+                        </ul>
+                    </li>
+                    <li><strong>已授權的重新導向 URI</strong>：
+                        <ul class="list-disc list-inside ml-6 mt-1 text-sm space-y-1">
+                            <li>點擊「新增 URI」</li>
+                            <li>填入：<code class="bg-gray-200 px-1 rounded">https://script.google.com</code></li>
+                        </ul>
+                    </li>
+                    <li>點擊 <strong>「建立」</strong></li>
+                </ol>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="bg-white rounded-2xl shadow-lg p-8">
+                <h3 class="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2">
+                    <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm font-bold">4</span>
+                    取得 Client ID
+                </h3>
+                <div class="bg-gray-50 rounded-xl p-6 space-y-3">
+                    <p class="text-gray-600">建立完成後，您會看到一個彈出視窗，顯示 <strong>「您的用戶端 ID」</strong>。</p>
+                    <div class="code-block text-sm bg-gray-900 text-green-400 rounded-xl p-4 overflow-x-auto">
+                        <pre>格式範例：1234567890-abc123def456.apps.googleusercontent.com</pre>
+                    </div>
+                    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-700">
+                        <strong>請複製這串字串</strong>，這是本專案唯一需要的資料。
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. 將 ID 整合進您的專案 -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">3</span>
+                將 ID 整合進您的專案
+            </h2>
+            <div class="bg-white rounded-2xl shadow-lg p-8">
+                <p class="text-gray-600 mb-4">拿到 Client ID 後，請依照以下步驟設定您的 Google 試算表：</p>
+                <ol class="space-y-3 text-gray-600 list-decimal list-inside">
+                    <li>開啟與 GAS 專案綁定的 <strong>Google 試算表</strong></li>
+                    <li>找到 <strong>「網站參數設定」</strong> 工作表</li>
+                    <li>在 <strong>「OAuth Client ID」</strong> 這一列的 <strong>「參數內容」</strong> 欄位中，貼上您剛剛複製的 ID</li>
+                    <li><strong>重新整理</strong> 您的 Web App 網頁</li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- 4. 常見問題與安全性提示 -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">4</span>
+                常見問題與安全性提示
+            </h2>
+            <div class="space-y-4">
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <h3 class="font-bold text-gray-800 mb-2">為什麼要設 Authorized JavaScript origins？</h3>
+                    <p class="text-gray-600 text-sm">這是為了防止駭客在其他網站惡意呼叫您的 Client ID。Google 只會允許來自 <code class="bg-gray-200 px-1 rounded">script.google.com</code> 的請求執行登入動作。</p>
+                </div>
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <h3 class="font-bold text-gray-800 mb-2">用戶端密鑰 (Client Secret) 需要用到嗎？</h3>
+                    <p class="text-gray-600 text-sm">在本專案的前端 SPA 架構中，我們使用的是 <strong>OAuth 2.0 Token 驗證流</strong>，不需要（也不可以）將 Client Secret 放在程式碼中，以確保安全。</p>
+                </div>
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <h3 class="font-bold text-gray-800 mb-2">為什麼看到「未經驗證的應用程式」警告？</h3>
+                    <p class="text-gray-600 text-sm">如果您的 OAuth 同意畫面設為 External，在通過 Google 審核前會看到此警告。您可以點擊「進階」並「繼續前往」來進行開發測試。對於組織內部 (Internal) 則不會有此問題。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 完成提示 -->
+        <section class="mb-16">
+            <div class="bg-gradient-to-r from-cyan-500 to-teal-500 rounded-2xl shadow-lg p-8 text-white text-center">
+                <p class="text-2xl font-bold mb-2">恭喜！您已經完成了認證系統的配置。</p>
+                <p class="text-cyan-100">現在您的 Web App 已經具備安全且跨網域的登入功能了！</p>
+            </div>
+        </section>
+
+        <!-- 延伸閱讀 -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-8 h-8 bg-cyan-100 text-cyan-600 rounded-lg flex items-center justify-center text-sm">5</span>
+                延伸閱讀
+            </h2>
+            <div class="bg-white rounded-2xl shadow-lg p-8">
+                <p class="text-gray-600 mb-4">如需更詳細的 GIS 整合教學，請參閱：</p>
+                <ul class="space-y-2">
+                    <li><a href="./GIS_SETUP_GUIDE.html" class="text-cyan-600 hover:underline font-medium">Google Identity Services (GIS) 設定教學</a>：完整的 GIS 整合步驟與資料來源</li>
+                </ul>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-gray-800 text-gray-400 py-8 px-6 text-center text-sm">
+        <p>GAS Auth SPA Template - OAuth 2.0 認證申請與原理指南</p>
+        <p class="mt-2">最後更新：2026-07-22</p>
+    </footer>
+</body>
+</html>
