@@ -10,3 +10,7 @@ package-lock.json
 
 # CodeGraph
 .codegraph/
+.worktrees/
+
+# Deploy
+.deploy/

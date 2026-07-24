@@ -60,12 +60,31 @@ function writeData() {
 
 /**
  * 處理 GET 請求，顯示首頁 (SPA 架構)
+ * 若系統尚未初始化，則導向設定精靈頁面
  */
 function doGet(e) {
-    // 在 SPA 架構中，doGet 僅負責返回 HTML 框架
-    // 所有的身分驗證都在前端載入後透過 JWT 進行
+    try {
+        const status = JSON.parse(getSystemStatus());
+        if (!status.isInitialized) {
+            return showSetupWizard();
+        }
+    } catch (_) {
+        // 如果檢查狀態失敗，仍顯示首頁
+    }
     return HtmlService.createHtmlOutputFromFile("index")
         .setTitle("載入中...")
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+        .setSandboxMode(HtmlService.SandboxMode.IFRAME)
+        .addMetaTag("viewport", "width=device-width, initial-scale=1");
+}
+
+/**
+ * 顯示系統初始化設定精靈
+ * @return {GoogleAppsScript.HTML.HtmlOutput} 設定精靈頁面
+ */
+function showSetupWizard() {
+    return HtmlService.createHtmlOutputFromFile("SetupWizard")
+        .setTitle("系統初始化設定")
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
         .setSandboxMode(HtmlService.SandboxMode.IFRAME)
         .addMetaTag("viewport", "width=device-width, initial-scale=1");
@@ -569,5 +588,184 @@ function testAuthScenarios() {
         Logger.log("使用者資料: " + JSON.stringify(result.user));
     } else {
         Logger.log("❌ 權限檢查失敗: " + result.reason);
+    }
+}
+
+// ==================== 系統初始化設定服務 (SetupService) ====================
+
+/**
+ * 檢查系統初始化狀態
+ * 回傳各項目的初始化狀態與警告訊息
+ * @return {string} JSON 字串
+ */
+function getSystemStatus() {
+    try {
+        let ss;
+        try {
+            ss = SpreadsheetApp.getActiveSpreadsheet();
+        } catch (_) {
+            return JSON.stringify({
+                isInitialized: false,
+                sheetsStatus: { "網站參數設定": false, "帳號管理": false },
+                warnings: ["無法存取試算表：此 Apps Script 專案未連結任何 Google 試算表"],
+            });
+        }
+
+        const sheetParams = ss.getSheetByName("網站參數設定");
+        const sheetAccounts = ss.getSheetByName("帳號管理");
+
+        const sheetsStatus = {
+            "網站參數設定": !!sheetParams,
+            "帳號管理": !!sheetAccounts,
+        };
+
+        const warnings = [];
+
+        if (sheetParams) {
+            const headers = sheetParams.getDataRange().getValues()[0];
+            if (
+                !headers.includes("參數項目") ||
+                !headers.includes("參數內容")
+            ) {
+                warnings.push("「網站參數設定」工作表標題不正確");
+            }
+        }
+
+        if (sheetAccounts) {
+            const headers = sheetAccounts.getDataRange().getValues()[0];
+            const expectedHeaders = [
+                "Email",
+                "姓名",
+                "人員編號",
+                "部門單位",
+                "角色",
+                "狀態",
+                "備註",
+            ];
+            const hasAllHeaders = expectedHeaders.every((h) =>
+                headers.includes(h)
+            );
+            if (!hasAllHeaders) {
+                warnings.push("「帳號管理」工作表標題不正確");
+            }
+        }
+
+        let clientId = "";
+        if (sheetParams) {
+            try {
+                const data = sheetParams.getDataRange().getValues();
+                for (let i = 1; i < data.length; i++) {
+                    if (data[i][0] === "OAuth Client ID") {
+                        clientId = data[i][1] || "";
+                        break;
+                    }
+                }
+            } catch (_) {}
+        }
+        if (!clientId) {
+            warnings.push("尚未設定 OAuth Client ID，無法啟用 Google 登入");
+        }
+
+        const isInitialized =
+            sheetsStatus["網站參數設定"] &&
+            sheetsStatus["帳號管理"] &&
+            !!clientId;
+
+        return JSON.stringify({
+            isInitialized,
+            sheetsStatus,
+            warnings,
+        });
+    } catch (error) {
+        return JSON.stringify({
+            isInitialized: false,
+            sheetsStatus: { "網站參數設定": false, "帳號管理": false },
+            warnings: ["檢查系統狀態時發生錯誤: " + error.message],
+        });
+    }
+}
+
+/**
+ * 執行系統初始化精靈（可重複執行，不破壞既有資料）
+ * @param {Object} settings - 初始化設定
+ * @param {string} settings.siteName - 網站名稱
+ * @param {string} settings.domain - 網站網域（選填）
+ * @param {string} settings.adminName - 管理員姓名
+ * @param {string} settings.adminEmail - 管理員 Email
+ * @param {string} settings.clientId - OAuth Client ID
+ * @return {string} JSON 字串
+ */
+function runInitializeWizard(settings) {
+    try {
+        // 1. 確保網站參數設定工作表存在
+        initWebsiteParameterSheet();
+
+        // 2. 填入使用者提供的設定值
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const paramSheet = ss.getSheetByName("網站參數設定");
+        const paramData = paramSheet.getDataRange().getValues();
+        const updates = {};
+        if (settings.siteName) updates["網站名稱"] = settings.siteName;
+        if (settings.domain) updates["網站網域"] = settings.domain;
+        if (settings.clientId) updates["OAuth Client ID"] = settings.clientId;
+
+        for (let i = 1; i < paramData.length; i++) {
+            const paramKey = paramData[i][0];
+            if (updates[paramKey] !== undefined) {
+                paramSheet.getRange(i + 1, 2).setValue(updates[paramKey]);
+            }
+        }
+
+        // 3. 確保帳號管理工作表存在（只有不存在時才初始化，避免清除既有資料）
+        let accountSheet = ss.getSheetByName("帳號管理");
+        if (!accountSheet) {
+            accountSheet = ss.insertSheet("帳號管理");
+            initializeAccountSheet(false);
+        }
+
+        // 4. 註冊目前使用者為管理員（如果尚未存在）
+        const adminEmail =
+            settings.adminEmail || Session.getActiveUser().getEmail();
+        const adminName = settings.adminName || "管理員";
+
+        const accountData = accountSheet.getDataRange().getValues();
+        const emailCol = accountData[0].indexOf("Email");
+        let adminExists = false;
+        if (emailCol !== -1) {
+            for (let i = 1; i < accountData.length; i++) {
+                if (
+                    accountData[i][emailCol]
+                        .toString()
+                        .trim()
+                        .toLowerCase() === adminEmail.toLowerCase()
+                ) {
+                    adminExists = true;
+                    break;
+                }
+            }
+        }
+
+        if (!adminExists) {
+            const headerRow = accountData[0];
+            const newRow = headerRow.map((header) => {
+                if (header === "Email") return adminEmail;
+                if (header === "姓名") return adminName;
+                if (header === "角色") return "管理員";
+                if (header === "狀態") return "啟用";
+                if (header === "備註") return "系統初始化自動建立";
+                return "";
+            });
+            accountSheet.appendRow(newRow);
+        }
+
+        return JSON.stringify({
+            status: "success",
+            message: "系統初始化完成！請使用 Google 帳號登入。",
+        });
+    } catch (error) {
+        return JSON.stringify({
+            status: "error",
+            message: "初始化失敗: " + error.message,
+        });
     }
 }
