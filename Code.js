@@ -600,7 +600,17 @@ function testAuthScenarios() {
  */
 function getSystemStatus() {
     try {
-        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        let ss;
+        try {
+            ss = SpreadsheetApp.getActiveSpreadsheet();
+        } catch (_) {
+            return JSON.stringify({
+                isInitialized: false,
+                sheetsStatus: { "網站參數設定": false, "帳號管理": false },
+                warnings: ["無法存取試算表：此 Apps Script 專案未連結任何 Google 試算表"],
+            });
+        }
+
         const sheetParams = ss.getSheetByName("網站參數設定");
         const sheetAccounts = ss.getSheetByName("帳號管理");
 
@@ -643,7 +653,13 @@ function getSystemStatus() {
         let clientId = "";
         if (sheetParams) {
             try {
-                clientId = getWebsiteParameter("OAuth Client ID");
+                const data = sheetParams.getDataRange().getValues();
+                for (let i = 1; i < data.length; i++) {
+                    if (data[i][0] === "OAuth Client ID") {
+                        clientId = data[i][1] || "";
+                        break;
+                    }
+                }
             } catch (_) {}
         }
         if (!clientId) {

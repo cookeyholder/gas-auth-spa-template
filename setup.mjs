@@ -16,7 +16,11 @@ function run(cmd, errorMessage) {
 }
 
 function capture(cmd) {
-  return execSync(cmd, { encoding: 'utf-8' }).trim();
+  try {
+    return execSync(cmd, { encoding: 'utf-8' }).trim();
+  } catch (e) {
+    throw new Error(`命令執行失敗: ${cmd}\n${e.stderr || e.message}`);
+  }
 }
 
 function checkNodeVersion() {
